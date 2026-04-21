@@ -172,7 +172,7 @@ export default function BrandKitPage() {
             <h2 className="text-lg font-bold text-slate-800 mb-5">미리보기</h2>
             <div className="glass-card rounded-2xl p-8">
               <div
-                className="aspect-square max-w-xs mx-auto p-6 rounded-2xl flex flex-col justify-between shadow-2xl animate-ink-spread"
+                className="aspect-square max-w-xs mx-auto p-6 rounded-2xl flex flex-col justify-between shadow-2xl animate-ink-spread pointer-events-none select-none"
                 style={{ backgroundColor: brandKit.primaryColor }}
               >
                 <div>
@@ -214,8 +214,8 @@ export default function BrandKitPage() {
                   지금 바로 시작하기 →
                 </p>
               </div>
-              <p className="text-center text-base font-bold text-white mt-6">
-                카드뉴스에 적용된 브랜드 키트 미리보기
+              <p className="text-center text-sm text-white/60 mt-6">
+                👆 클릭 불가 — 브랜드 키트 적용 미리보기
               </p>
             </div>
           </div>
