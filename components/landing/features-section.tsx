@@ -43,7 +43,7 @@ const brandFeatures = [
   {
     icon: Wand2,
     title: "우리 브랜드 말투로 자동 변환",
-    description: "대충 쓴 메모도 우리 회사 톤앤매너에 맞는 세련된 문장으로 자동 변환돼요.",
+    description: "간단한 메모도 우리 회사 톤앤매너에 맞는 세련된 문장으로 자동 변환돼요.",
     color: "text-[#c25a5a]",
   },
   {
