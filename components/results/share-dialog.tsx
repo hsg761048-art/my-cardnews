@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Copy, Check, Link, MessageSquare, ExternalLink, AlertTriangle, Wifi } from "lucide-react"
+import { Copy, Check, Link, MessageSquare, ExternalLink, AlertTriangle, Loader2 } from "lucide-react"
 import { copyToClipboard } from "@/lib/slide-share"
 
 interface ShareDialogProps {
@@ -18,26 +18,46 @@ interface ShareDialogProps {
 export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) {
   const [copied, setCopied] = useState(false)
   const [url, setUrl] = useState("")
+  const [isShortening, setIsShortening] = useState(false)
   const [isLocalhost, setIsLocalhost] = useState(false)
-  const [localNetworkUrl, setLocalNetworkUrl] = useState("")
+  const shortenedRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (open) {
-      const base = shareUrl || window.location.href
-      setUrl(base)
-      const hostname = window.location.hostname
-      const isLocal = hostname === "localhost" || hostname === "127.0.0.1"
-      setIsLocalhost(isLocal)
+    if (!open) return
 
-      // shareUrl이 있으면(실제 /share?d=... 링크) 경로만 꺼내서 표시용 로컬네트워크 URL 만들기
-      if (isLocal && shareUrl) {
-        try {
-          const path = new URL(shareUrl).pathname + new URL(shareUrl).search
-          setLocalNetworkUrl(
-            `(배포 후) https://your-domain.com${path}`
-          )
-        } catch {}
-      }
+    const base = shareUrl || window.location.href
+    const hostname = window.location.hostname
+    const isLocal = hostname === "localhost" || hostname === "127.0.0.1"
+    setIsLocalhost(isLocal)
+
+    // 이미 단축된 URL이 있으면 재사용
+    if (shortenedRef.current) {
+      setUrl(shortenedRef.current)
+      return
+    }
+
+    // 배포 환경에서만 단축 URL 생성
+    if (!isLocal && shareUrl) {
+      setIsShortening(true)
+      setUrl(shareUrl) // 단축 전 임시로 원본 표시
+      fetch("/api/shorten", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: shareUrl }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.shortUrl) {
+            shortenedRef.current = data.shortUrl
+            setUrl(data.shortUrl)
+          }
+        })
+        .catch(() => {
+          // 단축 실패 시 원본 URL 그대로 사용
+        })
+        .finally(() => setIsShortening(false))
+    } else {
+      setUrl(base)
     }
   }, [open, shareUrl])
 
@@ -85,24 +105,23 @@ export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) 
             <div className="flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
               <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <div className="text-xs text-amber-700 space-y-1">
-                <p className="font-semibold">개발 환경 (localhost) 에서는 같은 PC에서만 링크가 열려요</p>
-                <p className="text-amber-600">다른 기기에서 공유하려면 앱을 배포(Vercel 등)한 후 사용하세요.</p>
-                <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-amber-200">
-                  <Wifi className="w-3 h-3 text-amber-500" />
-                  <span className="text-amber-600">같은 Wi-Fi라면 IP 주소로 시도: </span>
-                  <code className="font-mono bg-amber-100 px-1 rounded text-amber-700">
-                    {typeof window !== "undefined"
-                      ? window.location.href.replace("localhost", "컴퓨터IP주소")
-                      : ""}
-                  </code>
-                </div>
+                <p className="font-semibold">개발 환경에서는 같은 PC에서만 링크가 열려요</p>
+                <p className="text-amber-600">배포 환경(Vercel)에서는 자동으로 짧은 링크가 생성됩니다.</p>
               </div>
             </div>
           )}
 
           {/* 공유 링크 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">공유 링크</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-foreground">공유 링크</label>
+              {isShortening && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  링크 단축 중...
+                </span>
+              )}
+            </div>
             <div className="flex gap-2">
               <div className="flex-1 relative">
                 <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -114,6 +133,7 @@ export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) 
               </div>
               <Button
                 onClick={handleCopy}
+                disabled={isShortening}
                 variant="outline"
                 className={`h-11 px-4 border-border transition-colors ${copied ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "hover:bg-muted"}`}
               >
