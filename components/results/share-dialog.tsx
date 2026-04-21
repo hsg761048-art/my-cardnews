@@ -23,7 +23,11 @@ export function ShareDialog({ open, onOpenChange, shareUrl, strippedImages = 0 }
   const [isShortening, setIsShortening] = useState(false)
   const [shortenFailed, setShortenFailed] = useState(false)
   const [isLocalhost, setIsLocalhost] = useState(false)
+  const [isMac, setIsMac] = useState(false)
   const shortenedRef = useRef<string | null>(null)
+
+  // Mac 이면 Cmd+V, 그 외엔 Ctrl+V 안내
+  const pasteKey = isMac ? "⌘ + V" : "Ctrl + V"
 
   useEffect(() => {
     if (!open) return
@@ -32,6 +36,8 @@ export function ShareDialog({ open, onOpenChange, shareUrl, strippedImages = 0 }
     const hostname = window.location.hostname
     const isLocal = hostname === "localhost" || hostname === "127.0.0.1"
     setIsLocalhost(isLocal)
+    // OS 감지 — 단축키 안내에 사용
+    setIsMac(/Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent))
 
     // 이미 단축된 URL이 있으면 재사용
     if (shortenedRef.current) {
@@ -229,7 +235,15 @@ export function ShareDialog({ open, onOpenChange, shareUrl, strippedImages = 0 }
                 {kakaoCopied ? "복사됨! 붙여넣기 하세요" : "카카오톡"}
               </Button>
               {kakaoCopied && (
-                <p className="text-[10px] text-yellow-600 text-center">카카오톡 채팅창에서 Ctrl+V (붙여넣기)</p>
+                <div className="mt-1 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-300 text-center">
+                  <p className="text-sm font-semibold text-yellow-800">
+                    카카오톡 채팅창에서{" "}
+                    <kbd className="inline-block px-1.5 py-0.5 mx-0.5 rounded border border-yellow-400 bg-white text-yellow-900 font-mono text-xs align-middle">
+                      {pasteKey}
+                    </kbd>{" "}
+                    붙여넣기
+                  </p>
+                </div>
               )}
             </div>
             <Button
