@@ -45,11 +45,10 @@ export function Header() {
             {[
               { href: "#features", label: "기능" },
               { href: "#how-it-works", label: "사용 방법" },
-              { href: "#pricing", label: "요금제" },
             ].map((item) => (
-              <Link 
+              <Link
                 key={item.href}
-                href={item.href} 
+                href={item.href}
                 className="relative text-white/80 hover:text-lime-400 transition-colors duration-300 text-sm font-semibold group"
               >
                 {item.label}
@@ -92,11 +91,10 @@ export function Header() {
               {[
                 { href: "#features", label: "기능" },
                 { href: "#how-it-works", label: "사용 방법" },
-                { href: "#pricing", label: "요금제" },
               ].map((item) => (
-                <Link 
+                <Link
                   key={item.href}
-                  href={item.href} 
+                  href={item.href}
                   className="text-white/80 hover:text-lime-400 transition-colors text-lg py-2 font-semibold"
                   onClick={() => setIsMenuOpen(false)}
                 >
