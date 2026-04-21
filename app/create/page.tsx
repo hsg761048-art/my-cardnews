@@ -109,22 +109,31 @@ export default function CreatePage() {
       localStorage.removeItem("library-current-id")
       localStorage.removeItem("library-editor-slides")
 
+      // 브랜드 키트 폰트명 → GeneratedDesign fontFamily 매핑
+      const mapFont = (font: string): string => {
+        if (font.includes("Pretendard")) return "pretendard"
+        if (font.includes("Nanum Myeongjo") || font.includes("Playfair")) return "nanum-myeongjo"
+        if (font.includes("Nanum Gothic")) return "nanum-gothic"
+        return "noto-sans" // Noto Sans KR, Inter, DM Sans, Space Grotesk → noto-sans 계열로 처리
+      }
+
       // 브랜드 키트 색상·폰트 강제 적용 함수
+      // GeneratedSlide 포맷: design.background / design.titleColor 등
       const applyBrandKit = (slides: unknown[]) => {
         if (!useBrandKit || !brandKit || !Array.isArray(slides)) return slides
         return slides.map((slide: unknown) => {
           const s = slide as Record<string, unknown>
-          const bgStyle = (s.bgStyle ?? {}) as Record<string, unknown>
+          const design = (s.design ?? {}) as Record<string, unknown>
           return {
             ...s,
-            fontFamily: brandKit.font,
-            bgStyle: {
-              ...bgStyle,
+            design: {
+              ...design,
               background: brandKit.primaryColor,
               titleColor: brandKit.secondaryColor,
               textColor: brandKit.secondaryColor,
               ctaBg: brandKit.accentColor,
-              ctaText: brandKit.secondaryColor,
+              ctaText: brandKit.primaryColor,
+              fontFamily: mapFont(brandKit.font),
             },
           }
         })
