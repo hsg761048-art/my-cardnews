@@ -75,6 +75,7 @@ function toFontFamily(font: string | undefined): FontFamily {
 
 // ─── localStorage에서 AI 생성 슬라이드 읽기 ──────────────────────
 // results 페이지와 동일한 로직: slidesByStyle[style] 우선, 구포맷 slides 폴백
+// + 브랜드 키트가 활성화되어 있으면 별도 저장된 로고를 다시 붙임
 function loadAISlides(style: string = "minimal"): GeneratedSlide[] | null {
   try {
     const raw = localStorage.getItem("generated-card-slides")
@@ -86,7 +87,23 @@ function loadAISlides(style: string = "minimal"): GeneratedSlide[] | null {
     // 새 포맷 (slidesByStyle) 우선, 구버전 (slides) 폴백
     const slides: GeneratedSlide[] | undefined =
       parsed.slidesByStyle?.[style] ?? parsed.slides
-    return slides && slides.length > 0 ? slides : null
+    if (!slides || slides.length === 0) return null
+
+    // 브랜드 로고가 별도 키에 저장된 경우 슬라이드에 다시 붙이기
+    // (results 페이지의 로직과 동일 — localStorage 용량 절약을 위해 로고는 별도 저장됨)
+    if (localStorage.getItem("brand-kit-active") === "true") {
+      let logoUrl = localStorage.getItem("brand-kit-logo") || undefined
+      if (!logoUrl) {
+        try {
+          const kit = JSON.parse(localStorage.getItem("nuance-brand-kit") || "{}")
+          logoUrl = kit.logo || undefined
+        } catch {}
+      }
+      if (logoUrl) {
+        return slides.map((s) => ({ ...s, logoUrl } as GeneratedSlide & { logoUrl: string }))
+      }
+    }
+    return slides
   } catch {
     return null
   }
@@ -115,6 +132,8 @@ function aiSlidesToEditorData(aiSlides: GeneratedSlide[]): EditorCardData {
   const slides: Slide[] = aiSlides.map((s, i) => {
     const bgStyle = designToBgStyle(s.design)
     const fontFamily = toFontFamily(s.design?.fontFamily)
+    // 브랜드 로고는 GeneratedSlide에 동적으로 붙어있음 (loadAISlides에서 주입)
+    const logoUrl = (s as GeneratedSlide & { logoUrl?: string }).logoUrl
     return createDefaultSlide({
       title: s.title,
       subtitle: s.subtitle ?? "",
@@ -125,6 +144,7 @@ function aiSlidesToEditorData(aiSlides: GeneratedSlide[]): EditorCardData {
       textAlign: i === 0 ? "center" : "left",
       bgImagePrompt: s.design?.bgImagePrompt,
       bgImageUrl: savedImages[i] || undefined,
+      logoUrl,
     })
   })
 
