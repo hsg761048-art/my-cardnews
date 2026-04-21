@@ -69,12 +69,15 @@ export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) 
     }
   }
 
-  const handleKakao = () => {
-    // 카카오톡 링크 공유 (앱이 없으면 웹으로 폴백)
-    window.open(
-      `https://story.kakao.com/share?url=${encodeURIComponent(url)}`,
-      "_blank"
-    )
+  const [kakaoCopied, setKakaoCopied] = useState(false)
+
+  const handleKakao = async () => {
+    // 카카오 공유 API 종료됨 → 링크 복사 후 안내
+    const ok = await copyToClipboard(url)
+    if (ok) {
+      setKakaoCopied(true)
+      setTimeout(() => setKakaoCopied(false), 3000)
+    }
   }
 
   const handleEmail = () => {
@@ -181,16 +184,21 @@ export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) 
 
           {/* 공유 옵션 */}
           <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              onClick={handleKakao}
-              className="h-11 border-border hover:bg-muted gap-2"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 3C6.5 3 2 6.58 2 11c0 2.11.89 4.03 2.36 5.45.61 2.52-.15 4.71-.64 5.55.66-.04 2.75-.25 4.82-1.63 1.08.31 2.23.47 3.46.47 5.5 0 10-3.58 10-8s-4.5-8-10-8z" />
-              </svg>
-              카카오톡
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="outline"
+                onClick={handleKakao}
+                className={`h-11 border-border gap-2 transition-colors ${kakaoCopied ? "bg-yellow-50 text-yellow-700 border-yellow-300" : "hover:bg-muted"}`}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 3C6.5 3 2 6.58 2 11c0 2.11.89 4.03 2.36 5.45.61 2.52-.15 4.71-.64 5.55.66-.04 2.75-.25 4.82-1.63 1.08.31 2.23.47 3.46.47 5.5 0 10-3.58 10-8s-4.5-8-10-8z" />
+                </svg>
+                {kakaoCopied ? "복사됨! 붙여넣기 하세요" : "카카오톡"}
+              </Button>
+              {kakaoCopied && (
+                <p className="text-[10px] text-yellow-600 text-center">카카오톡 채팅창에서 Ctrl+V (붙여넣기)</p>
+              )}
+            </div>
             <Button
               variant="outline"
               onClick={handleEmail}
