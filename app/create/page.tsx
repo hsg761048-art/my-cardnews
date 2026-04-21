@@ -45,7 +45,7 @@ export default function CreatePage() {
     } catch {}
   }, [provider])
 
-  // 브랜드 키트 불러오기
+  // 브랜드 키트 + 토글 상태 불러오기
   useEffect(() => {
     try {
       const saved = localStorage.getItem("nuance-brand-kit")
@@ -53,8 +53,21 @@ export default function CreatePage() {
         const parsed = JSON.parse(saved) as BrandKitData
         setBrandKit(parsed)
       }
+      // 마지막 토글 상태 복원
+      const toggleSaved = localStorage.getItem("brand-kit-toggle")
+      if (toggleSaved === "true" && saved) {
+        setUseBrandKit(true)
+      }
     } catch {}
   }, [])
+
+  // 토글 변경 시 localStorage에 저장
+  const handleBrandKitToggle = (val: boolean) => {
+    setUseBrandKit(val)
+    try {
+      localStorage.setItem("brand-kit-toggle", val ? "true" : "false")
+    } catch {}
+  }
 
   const handleGenerate = async (raw: RawInput) => {
     setIsGenerating(true)
@@ -255,7 +268,7 @@ export default function CreatePage() {
                   <Switch
                     id="brand-kit-toggle"
                     checked={useBrandKit}
-                    onCheckedChange={setUseBrandKit}
+                    onCheckedChange={handleBrandKitToggle}
                     disabled={!brandKit}
                     className="data-[state=checked]:bg-primary"
                   />
