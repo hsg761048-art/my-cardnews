@@ -223,29 +223,16 @@ export function ShareDialog({ open, onOpenChange, shareUrl, strippedImages = 0 }
 
           {/* 공유 옵션 */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <Button
-                variant="outline"
-                onClick={handleKakao}
-                className={`h-11 border-border gap-2 transition-colors ${kakaoCopied ? "bg-yellow-50 text-yellow-700 border-yellow-300" : "hover:bg-muted"}`}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 3C6.5 3 2 6.58 2 11c0 2.11.89 4.03 2.36 5.45.61 2.52-.15 4.71-.64 5.55.66-.04 2.75-.25 4.82-1.63 1.08.31 2.23.47 3.46.47 5.5 0 10-3.58 10-8s-4.5-8-10-8z" />
-                </svg>
-                {kakaoCopied ? "복사됨! 붙여넣기 하세요" : "카카오톡"}
-              </Button>
-              {kakaoCopied && (
-                <div className="mt-1 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-300 text-center">
-                  <p className="text-sm font-semibold text-yellow-800">
-                    카카오톡 채팅창에서{" "}
-                    <kbd className="inline-block px-1.5 py-0.5 mx-0.5 rounded border border-yellow-400 bg-white text-yellow-900 font-mono text-xs align-middle">
-                      {pasteKey}
-                    </kbd>{" "}
-                    붙여넣기
-                  </p>
-                </div>
-              )}
-            </div>
+            <Button
+              variant="outline"
+              onClick={handleKakao}
+              className={`h-11 border-border gap-2 transition-colors ${kakaoCopied ? "bg-yellow-50 text-yellow-700 border-yellow-300" : "hover:bg-muted"}`}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3C6.5 3 2 6.58 2 11c0 2.11.89 4.03 2.36 5.45.61 2.52-.15 4.71-.64 5.55.66-.04 2.75-.25 4.82-1.63 1.08.31 2.23.47 3.46.47 5.5 0 10-3.58 10-8s-4.5-8-10-8z" />
+              </svg>
+              {kakaoCopied ? "복사됨!" : "카카오톡"}
+            </Button>
             <Button
               variant="outline"
               onClick={handleEmail}
@@ -257,6 +244,22 @@ export function ShareDialog({ open, onOpenChange, shareUrl, strippedImages = 0 }
               이메일
             </Button>
           </div>
+
+          {/* 카카오톡 붙여넣기 안내 — 전체 너비 */}
+          {kakaoCopied && (
+            <div className="px-4 py-4 rounded-xl bg-yellow-50 border-2 border-yellow-300 text-center shadow-sm">
+              <p className="text-base font-bold text-yellow-900 leading-relaxed">
+                ✓ 링크가 복사됐어요!
+              </p>
+              <p className="mt-2 text-base font-semibold text-yellow-800 leading-relaxed">
+                카카오톡 채팅창에서{" "}
+                <kbd className="inline-block px-2.5 py-1 mx-0.5 rounded-md border-2 border-yellow-500 bg-white text-yellow-900 font-mono text-base font-bold align-middle shadow-sm">
+                  {pasteKey}
+                </kbd>{" "}
+                로 붙여넣기 하세요
+              </p>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
