@@ -29,7 +29,7 @@ export function HeroSection() {
                 <span className="text-[#c25a5a]">완성</span>
               </h1>
               <p className="text-lg md:text-xl text-white/80 max-w-md leading-relaxed font-medium">
-                대충 적은 아이디어를 전문가급 카드뉴스로 변환합니다.
+                간단한 아이디어를 전문가급 카드뉴스로 변환합니다.
                 <br className="hidden md:block" />
                 시간 없는 마케터와 CEO를 위한 <span className="text-lime-400">AI 파트너</span>.
               </p>
