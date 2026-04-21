@@ -5,6 +5,11 @@ export type VerticalAlign = "top" | "middle" | "bottom"
 export type FontSize = "sm" | "md" | "lg" | "xl"
 export type FontFamily = "pretendard" | "noto-sans" | "nanum-gothic" | "nanum-myeongjo"
 
+// 제품 이미지 위치 (슬라이드 내 수직 위치 기준)
+export type ProductImagePosition = "top" | "center" | "bottom"
+// 제품 이미지 크기 (슬라이드 너비 대비 %)
+export type ProductImageSize = "sm" | "md" | "lg"
+
 export interface BgStyle {
   type: "solid" | "gradient"
   background: string   // CSS background 값
@@ -27,8 +32,19 @@ export interface Slide {
   verticalAlign?: VerticalAlign
   fontFamily: FontFamily
   bgImagePrompt?: string  // AI가 생성한 배경 이미지 검색용 프롬프트
-  bgImageUrl?: string     // 실제 로드된 배경 이미지 URL (Pexels / FLUX)
+  bgImageUrl?: string     // 실제 로드된 배경 이미지 URL (Pexels / FLUX) 또는 사용자 업로드 base64
   logoUrl?: string        // 브랜드 로고 URL (브랜드 키트 적용 시)
+  // 사용자가 업로드한 제품 이미지 (텍스트와 별도 레이어로 표시됨)
+  productImageUrl?: string
+  productImagePosition?: ProductImagePosition
+  productImageSize?: ProductImageSize
+}
+
+// 제품 이미지 크기 매핑 (슬라이드 너비 대비 %)
+export const PRODUCT_IMAGE_SIZE_MAP: Record<ProductImageSize, number> = {
+  sm: 30,
+  md: 45,
+  lg: 60,
 }
 
 export interface EditorCardData {

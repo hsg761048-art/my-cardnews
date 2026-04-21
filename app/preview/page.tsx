@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Slide, EditorCardData } from "@/components/editor/editor-types"
-import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP, VERTICAL_ALIGN_MAP } from "@/components/editor/editor-types"
+import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP, VERTICAL_ALIGN_MAP, PRODUCT_IMAGE_SIZE_MAP } from "@/components/editor/editor-types"
 import { ShareDialog } from "@/components/results/share-dialog"
 import { downloadSlides } from "@/lib/slide-download"
 import { createShareUrl } from "@/lib/slide-share"
@@ -56,6 +56,27 @@ function SlideCard({ slide, index, total }: { slide: Slide; index: number; total
             src={slide.logoUrl}
             alt="brand logo"
             className="h-7 max-w-[100px] object-contain"
+          />
+        </div>
+      )}
+
+      {/* 제품 이미지 레이어 */}
+      {slide.productImageUrl && (
+        <div
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none",
+            (slide.productImagePosition ?? "top") === "top" && "top-6",
+            (slide.productImagePosition ?? "top") === "center" && "top-1/2 -translate-y-1/2",
+            (slide.productImagePosition ?? "top") === "bottom" && "bottom-6"
+          )}
+          style={{
+            width: `${PRODUCT_IMAGE_SIZE_MAP[slide.productImageSize ?? "md"]}%`,
+          }}
+        >
+          <img
+            src={slide.productImageUrl}
+            alt="product"
+            className="w-full h-auto object-contain drop-shadow-lg"
           />
         </div>
       )}

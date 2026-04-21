@@ -6,7 +6,7 @@ import Link from "next/link"
 import { Sparkles, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Slide } from "@/components/editor/editor-types"
-import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP } from "@/components/editor/editor-types"
+import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP, PRODUCT_IMAGE_SIZE_MAP } from "@/components/editor/editor-types"
 import { decodeShareData } from "@/lib/slide-share"
 
 // ─── 슬라이드 카드 렌더러 ─────────────────────────────────────
@@ -26,6 +26,38 @@ function SlideCard({ slide }: { slide: Slide }) {
         </>
       ) : (
         <div className="absolute inset-0" style={{ background: slide.bgStyle.background }} />
+      )}
+
+      {/* 브랜드 로고 */}
+      {slide.logoUrl && (
+        <div className="absolute top-4 left-4 z-10">
+          <img
+            src={slide.logoUrl}
+            alt="brand logo"
+            className="h-7 max-w-[100px] object-contain"
+          />
+        </div>
+      )}
+
+      {/* 제품 이미지 레이어 */}
+      {slide.productImageUrl && (
+        <div
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none",
+            (slide.productImagePosition ?? "top") === "top" && "top-6",
+            (slide.productImagePosition ?? "top") === "center" && "top-1/2 -translate-y-1/2",
+            (slide.productImagePosition ?? "top") === "bottom" && "bottom-6"
+          )}
+          style={{
+            width: `${PRODUCT_IMAGE_SIZE_MAP[slide.productImageSize ?? "md"]}%`,
+          }}
+        >
+          <img
+            src={slide.productImageUrl}
+            alt="product"
+            className="w-full h-auto object-contain drop-shadow-lg"
+          />
+        </div>
       )}
       <div
         className={cn("absolute inset-0 flex flex-col justify-between p-8 md:p-10", alignClass)}

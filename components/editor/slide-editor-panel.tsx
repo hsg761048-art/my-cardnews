@@ -1,20 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { cn } from "@/lib/utils"
-import { Type, Palette, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Check, ImageOff, Image } from "lucide-react"
+import { Type, Palette, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Check, ImageOff, Image, Upload, Package, Loader2 } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { Slide, FontSize, TextAlign, VerticalAlign, FontFamily } from "./editor-types"
+import type { Slide, FontSize, TextAlign, VerticalAlign, FontFamily, ProductImagePosition, ProductImageSize } from "./editor-types"
 import {
   BG_PRESETS,
   FONT_OPTIONS,
   FONT_SIZE_MAP,
   CONTENT_SIZE_MAP,
+  PRODUCT_IMAGE_SIZE_MAP,
 } from "./editor-types"
+import { processImageFile, isFileTooLarge } from "@/lib/image-upload"
 
-type PanelTab = "text" | "background" | "typography"
+type PanelTab = "text" | "background" | "product" | "typography"
 
 interface SlideEditorPanelProps {
   slide: Slide
@@ -27,6 +29,7 @@ export function SlideEditorPanel({ slide, onChange }: SlideEditorPanelProps) {
   const tabs: { id: PanelTab; label: string; icon: React.ReactNode }[] = [
     { id: "text", label: "텍스트", icon: <Type className="w-3.5 h-3.5" /> },
     { id: "background", label: "배경", icon: <Palette className="w-3.5 h-3.5" /> },
+    { id: "product", label: "제품", icon: <Package className="w-3.5 h-3.5" /> },
     { id: "typography", label: "타이포", icon: <span className="text-xs font-bold">Aa</span> },
   ]
 
@@ -58,6 +61,9 @@ export function SlideEditorPanel({ slide, onChange }: SlideEditorPanelProps) {
         )}
         {tab === "background" && (
           <BackgroundTab slide={slide} onChange={onChange} />
+        )}
+        {tab === "product" && (
+          <ProductImageTab slide={slide} onChange={onChange} />
         )}
         {tab === "typography" && (
           <TypographyTab slide={slide} onChange={onChange} />
@@ -135,9 +141,48 @@ function TextTab({ slide, onChange }: { slide: Slide; onChange: (u: Partial<Slid
 // ─── 배경 탭 ───────────────────────────────────────────────────
 function BackgroundTab({ slide, onChange }: { slide: Slide; onChange: (u: Partial<Slide>) => void }) {
   const currentBg = slide.bgStyle.background
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  // 업로드한 이미지인지(=base64 data:) 또는 AI 생성 이미지인지 구분
+  const isUserUploaded = !!slide.bgImageUrl?.startsWith("data:")
+
+  const handleUploadClick = () => {
+    setUploadError(null)
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    // input 을 같은 파일로도 다시 선택할 수 있게 value 를 비움
+    e.target.value = ""
+    if (!file) return
+    if (isFileTooLarge(file)) {
+      setUploadError("파일이 너무 큽니다. 10MB 이하 이미지를 선택해주세요.")
+      return
+    }
+    setUploading(true)
+    setUploadError(null)
+    try {
+      // 배경 이미지는 좀 더 크게 저장(1600px) — JPEG 로 변환
+      const dataUrl = await processImageFile(file, { maxSize: 1600, quality: 0.82 })
+      onChange({ bgImageUrl: dataUrl })
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "이미지 처리 중 오류가 발생했습니다.")
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <div className="p-4 space-y-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
       {/* 배경 이미지 상태 */}
       {slide.bgImageUrl && (
@@ -152,18 +197,57 @@ function BackgroundTab({ slide, onChange }: { slide: Slide; onChange: (u: Partia
             <div className="absolute inset-0 bg-black/30 flex items-end justify-between p-2">
               <div className="flex items-center gap-1.5">
                 <Image className="w-3 h-3 text-white/70" />
-                <span className="text-[10px] text-white/70">AI 생성 이미지</span>
+                <span className="text-[10px] text-white/70">
+                  {isUserUploaded ? "내가 업로드한 이미지" : "AI 생성 이미지"}
+                </span>
               </div>
-              <button
-                onClick={() => onChange({ bgImageUrl: undefined })}
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/80 hover:bg-red-500 text-white text-[10px] font-medium transition-colors"
-              >
-                <ImageOff className="w-3 h-3" />
-                제거
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleUploadClick}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 text-white text-[10px] font-medium transition-colors"
+                >
+                  <Upload className="w-3 h-3" />
+                  변경
+                </button>
+                <button
+                  onClick={() => onChange({ bgImageUrl: undefined })}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/80 hover:bg-red-500 text-white text-[10px] font-medium transition-colors"
+                >
+                  <ImageOff className="w-3 h-3" />
+                  제거
+                </button>
+              </div>
             </div>
           </div>
           <p className="text-[11px] text-white/30">이미지를 제거하면 아래 프리셋 색상이 표시됩니다</p>
+        </div>
+      )}
+
+      {/* 배경 이미지 업로드 (이미지가 없을 때) */}
+      {!slide.bgImageUrl && (
+        <div className="space-y-2">
+          <p className="text-xs text-white/50 font-semibold uppercase tracking-wider">내 이미지 업로드</p>
+          <button
+            onClick={handleUploadClick}
+            disabled={uploading}
+            className="w-full flex flex-col items-center justify-center gap-1.5 py-5 rounded-lg border border-dashed border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/40 transition-all disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 text-white/60 animate-spin" />
+                <span className="text-[11px] text-white/50">이미지 처리 중...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 text-white/60" />
+                <span className="text-[11px] text-white/60 font-medium">직접 찍은 배경/제품 사진 올리기</span>
+                <span className="text-[10px] text-white/30">JPG · PNG · 최대 10MB</span>
+              </>
+            )}
+          </button>
+          {uploadError && (
+            <p className="text-[11px] text-red-400">{uploadError}</p>
+          )}
         </div>
       )}
 
@@ -235,6 +319,195 @@ function BackgroundTab({ slide, onChange }: { slide: Slide; onChange: (u: Partia
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── 제품 이미지 탭 ───────────────────────────────────────────
+function ProductImageTab({ slide, onChange }: { slide: Slide; onChange: (u: Partial<Slide>) => void }) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const position = slide.productImagePosition ?? "top"
+  const size = slide.productImageSize ?? "md"
+
+  const handleUploadClick = () => {
+    setUploadError(null)
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    if (isFileTooLarge(file)) {
+      setUploadError("파일이 너무 큽니다. 10MB 이하 이미지를 선택해주세요.")
+      return
+    }
+    setUploading(true)
+    setUploadError(null)
+    try {
+      // 제품 이미지는 투명 배경이 중요할 수 있으므로 PNG 유지
+      const isPng = file.type === "image/png"
+      const dataUrl = await processImageFile(file, {
+        maxSize: 1200,
+        quality: 0.85,
+        preservePng: isPng,
+      })
+      onChange({
+        productImageUrl: dataUrl,
+        // 기본 위치/크기가 없으면 채워줌
+        productImagePosition: slide.productImagePosition ?? "top",
+        productImageSize: slide.productImageSize ?? "md",
+      })
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "이미지 처리 중 오류가 발생했습니다.")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const positionOptions: { value: ProductImagePosition; label: string }[] = [
+    { value: "top", label: "위" },
+    { value: "center", label: "가운데" },
+    { value: "bottom", label: "아래" },
+  ]
+
+  const sizeOptions: { value: ProductImageSize; label: string }[] = [
+    { value: "sm", label: "작게" },
+    { value: "md", label: "보통" },
+    { value: "lg", label: "크게" },
+  ]
+
+  return (
+    <div className="p-4 space-y-5">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* 업로드 / 미리보기 */}
+      {!slide.productImageUrl ? (
+        <div className="space-y-2">
+          <Label className="text-xs text-white/50 font-semibold uppercase tracking-wider">
+            제품 이미지
+          </Label>
+          <button
+            onClick={handleUploadClick}
+            disabled={uploading}
+            className="w-full flex flex-col items-center justify-center gap-1.5 py-8 rounded-lg border border-dashed border-white/20 bg-white/5 hover:bg-white/10 hover:border-white/40 transition-all disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-5 h-5 text-white/60 animate-spin" />
+                <span className="text-xs text-white/50">이미지 처리 중...</span>
+              </>
+            ) : (
+              <>
+                <Package className="w-5 h-5 text-white/60" />
+                <span className="text-xs text-white/70 font-medium">제품 사진 올리기</span>
+                <span className="text-[10px] text-white/30">JPG · PNG · 최대 10MB</span>
+              </>
+            )}
+          </button>
+          {uploadError && <p className="text-[11px] text-red-400">{uploadError}</p>}
+          <p className="text-[11px] text-white/30 leading-relaxed">
+            배경 위에 제품 이미지가 텍스트와 함께 표시됩니다.
+            투명 배경(PNG)을 그대로 유지합니다.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-white/50 font-semibold uppercase tracking-wider">제품 이미지</Label>
+            <button
+              onClick={() => onChange({ productImageUrl: undefined })}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/80 hover:bg-red-500 text-white text-[10px] font-medium transition-colors"
+            >
+              <ImageOff className="w-3 h-3" />
+              제거
+            </button>
+          </div>
+          <div className="relative rounded-lg overflow-hidden border border-white/15 bg-[repeating-conic-gradient(#222_0%_25%,#333_0%_50%)] bg-[length:16px_16px]">
+            <img
+              src={slide.productImageUrl}
+              alt="제품 이미지"
+              className="w-full h-36 object-contain p-2"
+            />
+          </div>
+          <button
+            onClick={handleUploadClick}
+            disabled={uploading}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 text-xs font-medium transition-colors disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                처리 중...
+              </>
+            ) : (
+              <>
+                <Upload className="w-3.5 h-3.5" />
+                다른 이미지로 변경
+              </>
+            )}
+          </button>
+          {uploadError && <p className="text-[11px] text-red-400">{uploadError}</p>}
+        </div>
+      )}
+
+      {/* 위치 / 크기 조정 (이미지가 있을 때만) */}
+      {slide.productImageUrl && (
+        <>
+          <div className="space-y-2">
+            <p className="text-xs text-white/50 font-semibold uppercase tracking-wider">위치</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {positionOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => onChange({ productImagePosition: value })}
+                  className={cn(
+                    "py-2 rounded-lg text-xs font-medium border transition-all",
+                    position === value
+                      ? "border-primary/60 bg-primary/15 text-primary"
+                      : "border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white/70"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-white/30">텍스트와 겹치지 않게 위치를 선택하세요</p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs text-white/50 font-semibold uppercase tracking-wider">크기</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {sizeOptions.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => onChange({ productImageSize: value })}
+                  className={cn(
+                    "py-2 rounded-lg text-xs font-medium border transition-all",
+                    size === value
+                      ? "border-primary/60 bg-primary/15 text-primary"
+                      : "border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white/70"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-white/30">
+              슬라이드 너비의 약 {PRODUCT_IMAGE_SIZE_MAP[size]}%
+            </p>
+          </div>
+        </>
+      )}
     </div>
   )
 }

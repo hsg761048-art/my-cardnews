@@ -2,7 +2,7 @@
  * 슬라이드 PNG 다운로드 유틸 (html2canvas + JSZip CDN 동적 로드)
  */
 import type { Slide } from "@/components/editor/editor-types"
-import { FONT_OPTIONS } from "@/components/editor/editor-types"
+import { FONT_OPTIONS, PRODUCT_IMAGE_SIZE_MAP } from "@/components/editor/editor-types"
 
 export const FORMAT_SIZES: Record<string, { width: number; height: number; label: string }> = {
   square: { width: 1080, height: 1080, label: "instagram_1x1" },
@@ -69,10 +69,37 @@ function slideToHTML(slide: Slide, W: number, H: number): string {
     ? `<div style="position:absolute;inset:0;background:rgba(0,0,0,0.32);"></div>`
     : ""
 
+  // 브랜드 로고 (있으면 좌상단)
+  const logoHtml = slide.logoUrl
+    ? `<div style="position:absolute;top:${Math.round(W * 0.04)}px;left:${Math.round(W * 0.04)}px;z-index:5;">
+         <img src="${slide.logoUrl}" alt="logo" style="height:${Math.round(W * 0.055)}px;max-width:${Math.round(W * 0.28)}px;object-fit:contain;" />
+       </div>`
+    : ""
+
+  // 제품 이미지 레이어
+  let productHtml = ""
+  if (slide.productImageUrl) {
+    const widthPct = PRODUCT_IMAGE_SIZE_MAP[slide.productImageSize ?? "md"]
+    const pos = slide.productImagePosition ?? "top"
+    const positionCss =
+      pos === "top"
+        ? `top:${Math.round(H * 0.05)}px;`
+        : pos === "bottom"
+        ? `bottom:${Math.round(H * 0.05)}px;`
+        : `top:50%;transform:translate(-50%,-50%);`
+    const transform = pos === "center" ? "translate(-50%,-50%)" : "translateX(-50%)"
+    productHtml = `
+    <div style="position:absolute;left:50%;${positionCss}width:${widthPct}%;z-index:4;transform:${transform};pointer-events:none;">
+      <img src="${slide.productImageUrl}" alt="product" style="width:100%;height:auto;object-fit:contain;display:block;filter:drop-shadow(0 8px 18px rgba(0,0,0,0.35));" crossorigin="anonymous" />
+    </div>`
+  }
+
   return `
 <div style="width:${W}px;height:${H}px;${bgCSS}position:relative;overflow:hidden;font-family:${fontCss};box-sizing:border-box;">
   ${overlay}
-  <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:${pad}px;text-align:${ta};box-sizing:border-box;z-index:1;">
+  ${logoHtml}
+  ${productHtml}
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:${pad}px;text-align:${ta};box-sizing:border-box;z-index:2;">
     <div>
       ${slide.subtitle ? `<p style="font-size:${subtitlePx}px;font-weight:500;color:${slide.bgStyle.titleColor};opacity:.8;margin:0 0 ${Math.round(W * 0.015)}px;white-space:pre-line;">${esc(slide.subtitle)}</p>` : ""}
     </div>
@@ -145,6 +172,29 @@ export async function downloadSlides(
         })
       }
 
+      // 제품 이미지 로드 대기
+      if (slide.productImageUrl) {
+        await new Promise<void>((resolve) => {
+          const img = new Image()
+          img.onload = () => resolve()
+          img.onerror = () => resolve()
+          img.src = slide.productImageUrl!
+          setTimeout(resolve, 4000)
+        })
+      }
+
+      // 브랜드 로고 로드 대기
+      if (slide.logoUrl) {
+        await new Promise<void>((resolve) => {
+          const img = new Image()
+          img.crossOrigin = "anonymous"
+          img.onload = () => resolve()
+          img.onerror = () => resolve()
+          img.src = slide.logoUrl!
+          setTimeout(resolve, 4000)
+        })
+      }
+
       // 렌더링 대기
       await new Promise((r) => setTimeout(r, 150))
 
@@ -160,8 +210,8 @@ export async function downloadSlides(
           backgroundColor: null,
         })
 
-        const blob: Blob = await new Promise((r) =>
-          canvas.toBlob((b) => r(b!), "image/png")
+        const blob: Blob = await new Promise<Blob>((r) =>
+          canvas.toBlob((b: Blob | null) => r(b!), "image/png")
         )
         folder.file(`slide_${String(i + 1).padStart(2, "0")}.png`, blob)
       } catch (err) {
