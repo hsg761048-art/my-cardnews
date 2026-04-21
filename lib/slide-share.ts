@@ -35,16 +35,52 @@ export function decodeShareData(encoded: string): SharePayload | null {
   }
 }
 
+// 데이터 URI(base64) 인지 확인
+function isDataUri(url: string | undefined): boolean {
+  return !!url && url.startsWith("data:")
+}
+
+// 슬라이드에서 공유 URL 에 담기엔 너무 큰 필드(base64 이미지) 를 제거한다.
+// http(s) 로 시작하는 외부 URL(Pexels, CDN 등) 은 그대로 유지.
+// 반환값: 슬림화된 슬라이드 + 제거된 이미지 개수 (UX 안내용)
+export function slimSlidesForShare(slides: Slide[]): { slides: Slide[]; strippedCount: number } {
+  let strippedCount = 0
+  const slimmed = slides.map((s) => {
+    const next = { ...s }
+    if (isDataUri(next.logoUrl)) {
+      delete next.logoUrl
+      strippedCount++
+    }
+    if (isDataUri(next.bgImageUrl)) {
+      delete next.bgImageUrl
+      strippedCount++
+    }
+    if (isDataUri(next.productImageUrl)) {
+      delete next.productImageUrl
+      strippedCount++
+    }
+    return next
+  })
+  return { slides: slimmed, strippedCount }
+}
+
 // ─── 공유 링크 생성 ───────────────────────────────────────────
-export function createShareUrl(slides: Slide[], title: string): string {
+export interface CreateShareUrlResult {
+  url: string
+  strippedCount: number
+}
+
+export function createShareUrl(slides: Slide[], title: string): CreateShareUrlResult {
+  // 업로드된 이미지(데이터 URI) 는 공유 페이로드에 담기에 너무 커서 제거
+  const { slides: slimmed, strippedCount } = slimSlidesForShare(slides)
   const payload: SharePayload = {
     title,
-    slides,
+    slides: slimmed,
     createdAt: Date.now(),
   }
   const encoded = encodeShareData(payload)
   const base = typeof window !== "undefined" ? window.location.origin : ""
-  return `${base}/share?d=${encoded}`
+  return { url: `${base}/share?d=${encoded}`, strippedCount }
 }
 
 // ─── 클립보드 복사 ────────────────────────────────────────────

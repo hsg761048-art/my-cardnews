@@ -55,7 +55,7 @@ function DownloadModal({
 }: {
   item: LibraryItem
   onClose: () => void
-  onShare: (url: string) => void
+  onShare: (url: string, strippedCount: number) => void
 }) {
   const [selectedFormats, setSelectedFormats] = useState<string[]>(["square"])
   const [isDownloading, setIsDownloading] = useState(false)
@@ -190,9 +190,9 @@ function DownloadModal({
           {/* 공유 링크 */}
           <button
             onClick={() => {
-              const url = createShareUrl(item.slides, item.title)
+              const { url, strippedCount } = createShareUrl(item.slides, item.title)
               onClose()
-              setTimeout(() => onShare(url), 150)
+              setTimeout(() => onShare(url, strippedCount), 150)
             }}
             className="w-full flex items-center justify-center gap-2 h-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium transition-all"
           >
@@ -213,6 +213,7 @@ export default function LibraryPage() {
   const [downloadItem, setDownloadItem] = useState<LibraryItem | null>(null)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
+  const [shareStripped, setShareStripped] = useState(0)
 
   useEffect(() => {
     setItems(getLibraryItems())
@@ -430,15 +431,21 @@ export default function LibraryPage() {
         <DownloadModal
           item={downloadItem}
           onClose={() => setDownloadItem(null)}
-          onShare={(url) => {
+          onShare={(url, strippedCount) => {
             setShareUrl(url)
+            setShareStripped(strippedCount)
             setShowShareDialog(true)
           }}
         />
       )}
 
       {/* 공유 다이얼로그 */}
-      <ShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} shareUrl={shareUrl} />
+      <ShareDialog
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        shareUrl={shareUrl}
+        strippedImages={shareStripped}
+      />
     </div>
   )
 }

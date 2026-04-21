@@ -7,6 +7,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "url 필드가 필요합니다" }, { status: 400 })
     }
 
+    // TinyURL 은 매우 긴 URL(~8KB 이상) 은 거부한다. 미리 컷오프하면
+    // 불필요한 요청을 막고 사용자에게 빠르게 실패 신호를 보낼 수 있음
+    if (url.length > 8000) {
+      return NextResponse.json(
+        { error: "URL이 너무 깁니다. 이미지가 포함된 공유는 단축되지 않습니다." },
+        { status: 413 }
+      )
+    }
+
     // TinyURL API — 인증 불필요, 무료
     const res = await fetch(
       `https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`,

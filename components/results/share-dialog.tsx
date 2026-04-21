@@ -6,19 +6,22 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Copy, Check, Link, MessageSquare, ExternalLink, AlertTriangle, Loader2 } from "lucide-react"
+import { Copy, Check, Link, MessageSquare, ExternalLink, AlertTriangle, Loader2, Info } from "lucide-react"
 import { copyToClipboard } from "@/lib/slide-share"
 
 interface ShareDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   shareUrl?: string
+  /** 공유 페이로드에서 제외된 업로드 이미지(데이터 URI) 개수 */
+  strippedImages?: number
 }
 
-export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) {
+export function ShareDialog({ open, onOpenChange, shareUrl, strippedImages = 0 }: ShareDialogProps) {
   const [copied, setCopied] = useState(false)
   const [url, setUrl] = useState("")
   const [isShortening, setIsShortening] = useState(false)
+  const [shortenFailed, setShortenFailed] = useState(false)
   const [isLocalhost, setIsLocalhost] = useState(false)
   const shortenedRef = useRef<string | null>(null)
 
@@ -39,6 +42,7 @@ export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) 
     // 배포 환경에서만 단축 URL 생성
     if (!isLocal && shareUrl) {
       setIsShortening(true)
+      setShortenFailed(false)
       setUrl(shareUrl) // 단축 전 임시로 원본 표시
       fetch("/api/shorten", {
         method: "POST",
@@ -50,10 +54,13 @@ export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) 
           if (data.shortUrl) {
             shortenedRef.current = data.shortUrl
             setUrl(data.shortUrl)
+          } else {
+            setShortenFailed(true)
           }
         })
         .catch(() => {
           // 단축 실패 시 원본 URL 그대로 사용
+          setShortenFailed(true)
         })
         .finally(() => setIsShortening(false))
     } else {
@@ -110,6 +117,32 @@ export function ShareDialog({ open, onOpenChange, shareUrl }: ShareDialogProps) 
               <div className="text-xs text-amber-700 space-y-1">
                 <p className="font-semibold">개발 환경에서는 같은 PC에서만 링크가 열려요</p>
                 <p className="text-amber-600">배포 환경(Vercel)에서는 자동으로 짧은 링크가 생성됩니다.</p>
+              </div>
+            </div>
+          )}
+
+          {/* 업로드 이미지가 공유에서 제외되었다는 안내 */}
+          {strippedImages > 0 && (
+            <div className="flex gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+              <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div className="text-xs text-blue-800 space-y-1">
+                <p className="font-semibold">직접 올린 이미지는 공유 링크에 포함되지 않아요</p>
+                <p className="text-blue-700 leading-relaxed">
+                  브랜드 로고와 업로드한 배경/제품 사진은 용량이 커서 링크에서 제외됐어요.
+                  받는 분께는 텍스트와 기본 디자인만 표시됩니다.
+                  이미지까지 그대로 공유하려면 <span className="font-semibold">ZIP 다운로드</span>로 이미지 파일을 보내주세요.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 단축 실패 안내 */}
+          {shortenFailed && !isLocalhost && (
+            <div className="flex gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-700 space-y-1">
+                <p className="font-semibold">링크 단축에 실패했어요</p>
+                <p className="text-amber-600">원본 링크를 그대로 공유해도 동작하지만 조금 깁니다.</p>
               </div>
             </div>
           )}

@@ -330,6 +330,7 @@ function PreviewContent() {
   const [isSaved, setIsSaved] = useState(false)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
+  const [shareStripped, setShareStripped] = useState(0)
 
   useEffect(() => {
     try {
@@ -427,15 +428,21 @@ function PreviewContent() {
             isSaved={isSaved}
             onSaveToLibrary={handleSaveToLibrary}
             onShare={() => {
-              const url = createShareUrl(data.slides, cardTitle)
+              const { url, strippedCount } = createShareUrl(data.slides, cardTitle)
               setShareUrl(url)
+              setShareStripped(strippedCount)
               setShowShareDialog(true)
             }}
           />
         </div>
       </main>
 
-      <ShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} shareUrl={shareUrl} />
+      <ShareDialog
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        shareUrl={shareUrl}
+        strippedImages={shareStripped}
+      />
     </div>
   )
 }

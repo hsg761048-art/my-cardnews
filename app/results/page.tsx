@@ -74,6 +74,7 @@ function ResultsContent() {
   const [selectedSlide, setSelectedSlide] = useState(0)
   const [showShareDialog, setShowShareDialog] = useState(false)
   const [shareUrl, setShareUrl] = useState("")
+  const [shareStripped, setShareStripped] = useState(0)
   const [aiSlides, setAiSlides] = useState<GeneratedSlide[] | null>(null)
 
   // 배경 이미지 소스 (Pexels | FLUX.1 Pro)
@@ -331,7 +332,9 @@ function ResultsContent() {
                 onShare={() => {
                   if (aiSlides) {
                     const slides = aiSlidesToSlides(aiSlides, slideImages)
-                    setShareUrl(createShareUrl(slides, slides[0]?.title || title))
+                    const { url, strippedCount } = createShareUrl(slides, slides[0]?.title || title)
+                    setShareUrl(url)
+                    setShareStripped(strippedCount)
                   }
                   setShowShareDialog(true)
                 }}
@@ -344,7 +347,12 @@ function ResultsContent() {
         </main>
       </div>
 
-      <ShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} shareUrl={shareUrl} />
+      <ShareDialog
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        shareUrl={shareUrl}
+        strippedImages={shareStripped}
+      />
     </div>
   )
 }
