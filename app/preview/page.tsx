@@ -30,9 +30,9 @@ const EXPORT_FORMATS = [
 // ─── 슬라이드 카드 렌더러 ──────────────────────────────────────
 function SlideCard({ slide, index, total }: { slide: Slide; index: number; total: number }) {
   const fontCss = FONT_OPTIONS.find((f) => f.value === slide.fontFamily)?.css ?? "sans-serif"
-  const titleClass = FONT_SIZE_MAP[slide.titleSize].title
-  const contentClass = CONTENT_SIZE_MAP[slide.contentSize].content
-  const alignClass = ALIGN_MAP[slide.textAlign]
+  const titleClass = (FONT_SIZE_MAP[slide.titleSize] ?? FONT_SIZE_MAP["md"]).title
+  const contentClass = (CONTENT_SIZE_MAP[slide.contentSize] ?? CONTENT_SIZE_MAP["md"]).content
+  const alignClass = ALIGN_MAP[slide.textAlign] ?? ALIGN_MAP["left"]
 
   return (
     <div className="relative aspect-square rounded-2xl overflow-hidden shadow-xl shadow-black/40 group">
@@ -328,9 +328,13 @@ function PreviewContent() {
   if (!data) {
     return (
       <div className="min-h-screen bg-[#0f0f1e] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           <p className="text-white/40 text-sm">슬라이드 불러오는 중...</p>
+          <p className="text-white/20 text-xs">데이터가 없으면 에디터에서 다시 시도해주세요</p>
+          <Link href="/editor" className="mt-2 px-4 py-2 rounded-full text-xs bg-white/10 text-white/60 hover:bg-white/20 transition-all">
+            에디터로 가기
+          </Link>
         </div>
       </div>
     )
