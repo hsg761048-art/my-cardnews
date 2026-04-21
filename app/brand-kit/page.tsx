@@ -214,7 +214,7 @@ export default function BrandKitPage() {
                   지금 바로 시작하기 →
                 </p>
               </div>
-              <p className="text-center text-base font-semibold text-white mt-6">
+              <p className="text-center text-base font-bold mt-6" style={{ color: "#ffffff", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
                 👆 클릭 불가 — 브랜드 키트 적용 미리보기
               </p>
             </div>
