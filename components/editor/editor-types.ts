@@ -1,6 +1,7 @@
 // 에디터 공유 타입 정의
 
 export type TextAlign = "left" | "center" | "right"
+export type VerticalAlign = "top" | "middle" | "bottom"
 export type FontSize = "sm" | "md" | "lg" | "xl"
 export type FontFamily = "pretendard" | "noto-sans" | "nanum-gothic" | "nanum-myeongjo"
 
@@ -23,6 +24,7 @@ export interface Slide {
   titleSize: FontSize
   contentSize: FontSize
   textAlign: TextAlign
+  verticalAlign?: VerticalAlign
   fontFamily: FontFamily
   bgImagePrompt?: string  // AI가 생성한 배경 이미지 검색용 프롬프트
   bgImageUrl?: string     // 실제 로드된 배경 이미지 URL (Pexels / FLUX)
@@ -196,6 +198,12 @@ export const ALIGN_MAP: Record<TextAlign, string> = {
   right: "text-right items-end",
 }
 
+export const VERTICAL_ALIGN_MAP: Record<VerticalAlign, string> = {
+  top: "justify-start",
+  middle: "justify-center",
+  bottom: "justify-end",
+}
+
 // 새 슬라이드 기본값
 export function createDefaultSlide(overrides?: Partial<Slide>): Slide {
   return {
@@ -208,6 +216,7 @@ export function createDefaultSlide(overrides?: Partial<Slide>): Slide {
     titleSize: "lg",
     contentSize: "md",
     textAlign: "center",
+    verticalAlign: "middle",
     fontFamily: "pretendard",
     ...overrides,
   }

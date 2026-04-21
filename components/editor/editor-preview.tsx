@@ -4,7 +4,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { ChevronLeft, ChevronRight, Smartphone, Square } from "lucide-react"
 import type { Slide } from "./editor-types"
-import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP } from "./editor-types"
+import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP, VERTICAL_ALIGN_MAP } from "./editor-types"
 
 type AspectMode = "square" | "story"
 
@@ -24,6 +24,7 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange }: EditorPr
   const titleClass = FONT_SIZE_MAP[slide.titleSize].title
   const contentClass = CONTENT_SIZE_MAP[slide.contentSize].content
   const alignClass = ALIGN_MAP[slide.textAlign]
+  const verticalClass = VERTICAL_ALIGN_MAP[slide.verticalAlign ?? "middle"]
 
   const goToPrev = () => {
     if (selectedIndex > 0) onSlideChange(selectedIndex - 1)
@@ -115,8 +116,9 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange }: EditorPr
           {/* 콘텐츠 */}
           <div
             className={cn(
-              "absolute inset-0 flex flex-col justify-between p-6 md:p-8",
-              alignClass
+              "absolute inset-0 flex flex-col p-6 md:p-8 gap-4",
+              alignClass,
+              verticalClass
             )}
             style={{ fontFamily: fontCss }}
           >

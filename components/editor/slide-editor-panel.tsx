@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { Type, Palette, AlignLeft, AlignCenter, AlignRight, Check, ImageOff, Image } from "lucide-react"
+import { Type, Palette, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Check, ImageOff, Image } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { Slide, FontSize, TextAlign, FontFamily } from "./editor-types"
+import type { Slide, FontSize, TextAlign, VerticalAlign, FontFamily } from "./editor-types"
 import {
   BG_PRESETS,
   FONT_OPTIONS,
@@ -254,6 +254,12 @@ function TypographyTab({ slide, onChange }: { slide: Slide; onChange: (u: Partia
     { value: "right", icon: <AlignRight className="w-4 h-4" /> },
   ]
 
+  const verticalAlignOptions: { value: VerticalAlign; icon: React.ReactNode; label: string }[] = [
+    { value: "top",    icon: <AlignStartVertical  className="w-4 h-4" />, label: "위" },
+    { value: "middle", icon: <AlignCenterVertical className="w-4 h-4" />, label: "중앙" },
+    { value: "bottom", icon: <AlignEndVertical    className="w-4 h-4" />, label: "아래" },
+  ]
+
   return (
     <div className="p-4 space-y-5">
       {/* 폰트 선택 */}
@@ -328,6 +334,7 @@ function TypographyTab({ slide, onChange }: { slide: Slide; onChange: (u: Partia
       {/* 텍스트 정렬 */}
       <div className="space-y-2">
         <p className="text-xs text-white/50 font-semibold uppercase tracking-wider">텍스트 정렬</p>
+        {/* 수평 정렬 */}
         <div className="grid grid-cols-3 gap-1.5">
           {alignOptions.map(({ value, icon }) => (
             <button
@@ -341,6 +348,24 @@ function TypographyTab({ slide, onChange }: { slide: Slide; onChange: (u: Partia
               )}
             >
               {icon}
+            </button>
+          ))}
+        </div>
+        {/* 수직 위치 */}
+        <div className="grid grid-cols-3 gap-1.5 mt-1.5">
+          {verticalAlignOptions.map(({ value, icon, label }) => (
+            <button
+              key={value}
+              onClick={() => onChange({ verticalAlign: value })}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 py-2 rounded-lg border transition-all text-[10px] font-medium",
+                (slide.verticalAlign ?? "middle") === value
+                  ? "border-primary/60 bg-primary/15 text-primary"
+                  : "border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:text-white/70"
+              )}
+            >
+              {icon}
+              <span>{label}</span>
             </button>
           ))}
         </div>

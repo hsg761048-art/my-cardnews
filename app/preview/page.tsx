@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Slide, EditorCardData } from "@/components/editor/editor-types"
-import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP } from "@/components/editor/editor-types"
+import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP, VERTICAL_ALIGN_MAP } from "@/components/editor/editor-types"
 import { ShareDialog } from "@/components/results/share-dialog"
 import { downloadSlides } from "@/lib/slide-download"
 import { createShareUrl } from "@/lib/slide-share"
@@ -33,6 +33,7 @@ function SlideCard({ slide, index, total }: { slide: Slide; index: number; total
   const titleClass = (FONT_SIZE_MAP[slide.titleSize] ?? FONT_SIZE_MAP["md"]).title
   const contentClass = (CONTENT_SIZE_MAP[slide.contentSize] ?? CONTENT_SIZE_MAP["md"]).content
   const alignClass = ALIGN_MAP[slide.textAlign] ?? ALIGN_MAP["left"]
+  const verticalClass = VERTICAL_ALIGN_MAP[slide.verticalAlign ?? "middle"]
 
   return (
     <div className="relative aspect-square rounded-2xl overflow-hidden shadow-xl shadow-black/40 group">
@@ -49,7 +50,7 @@ function SlideCard({ slide, index, total }: { slide: Slide; index: number; total
       )}
 
       <div
-        className={cn("absolute inset-0 flex flex-col justify-between p-6", alignClass)}
+        className={cn("absolute inset-0 flex flex-col p-6 gap-4", alignClass, verticalClass)}
         style={{ fontFamily: fontCss }}
       >
         <div>
