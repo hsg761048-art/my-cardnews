@@ -41,7 +41,15 @@ function loadAISlides(style: CardStyle): GeneratedSlide[] | null {
     const parsed = JSON.parse(raw)
     if (Date.now() - parsed.generatedAt > 10 * 60 * 1000) return null
     // 새 포맷 (slidesByStyle) 우선, 구버전 (slides) 폴백
-    return parsed.slidesByStyle?.[style] ?? parsed.slides ?? null
+    const slides: GeneratedSlide[] = parsed.slidesByStyle?.[style] ?? parsed.slides ?? null
+    if (!slides) return null
+
+    // 브랜드 로고가 별도 키에 저장된 경우 슬라이드에 다시 붙이기
+    const logoUrl = localStorage.getItem("brand-kit-logo") || undefined
+    if (logoUrl && localStorage.getItem("brand-kit-active") === "true") {
+      return slides.map((s) => ({ ...s, logoUrl } as GeneratedSlide & { logoUrl: string }))
+    }
+    return slides
   } catch {
     return null
   }

@@ -162,12 +162,37 @@ export default function CreatePage() {
         elegant: applyBrandKit(slidesByStyle.elegant ?? []),
       }
 
+      // 브랜드 로고(base64)는 별도 키로 저장하고 슬라이드 데이터에서 제거
+      // → localStorage 용량 초과 방지 (base64 이미지가 15개 슬라이드에 복제되면 수 MB)
+      const stripLogoUrl = (slides: unknown[]) =>
+        slides.map((s) => {
+          const obj = s as Record<string, unknown>
+          const { logoUrl: _logo, ...rest } = obj
+          return rest
+        })
+
+      if (useBrandKit && brandKit?.logo) {
+        try {
+          localStorage.setItem("brand-kit-logo", brandKit.logo)
+        } catch {}
+      } else {
+        localStorage.removeItem("brand-kit-logo")
+      }
+
+      const slidesToStore = {
+        minimal: stripLogoUrl(brandApplied.minimal as unknown[]),
+        bold:    stripLogoUrl(brandApplied.bold as unknown[]),
+        elegant: stripLogoUrl(brandApplied.elegant as unknown[]),
+      }
+
+      // 이전 캐시 제거 후 새 데이터 저장 (용량 확보)
+      localStorage.removeItem("generated-card-slides")
       // 생성된 슬라이드를 localStorage에 저장 → 에디터/결과 페이지가 읽음
       localStorage.setItem(
         "generated-card-slides",
         JSON.stringify({
-          slidesByStyle: brandApplied,
-          slides: brandApplied.minimal,
+          slidesByStyle: slidesToStore,
+          slides: slidesToStore.minimal,
           provider: usedProvider,
           generatedAt: Date.now(),
         })
