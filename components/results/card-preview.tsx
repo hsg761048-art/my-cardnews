@@ -106,6 +106,17 @@ export function CardPreview({
             </div>
           )}
 
+          {/* 브랜드 로고 */}
+          {currentSlide.logoUrl && (
+            <div className="absolute top-4 left-4 z-10">
+              <img
+                src={currentSlide.logoUrl}
+                alt="brand logo"
+                className="h-8 max-w-[120px] object-contain"
+              />
+            </div>
+          )}
+
           {/* Header */}
           <div className={cn("relative z-10 flex flex-col", alignClass)}>
             {currentSlide.subtitle && (

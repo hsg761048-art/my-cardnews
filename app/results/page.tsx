@@ -25,6 +25,7 @@ export interface SlideWithDesign {
   cta?: string
   textAlign?: string
   design?: GeneratedSlide["design"]
+  logoUrl?: string
 }
 
 export interface GeneratedCard {
@@ -45,9 +46,18 @@ function loadAISlides(style: CardStyle): GeneratedSlide[] | null {
     if (!slides) return null
 
     // 브랜드 로고가 별도 키에 저장된 경우 슬라이드에 다시 붙이기
-    const logoUrl = localStorage.getItem("brand-kit-logo") || undefined
-    if (logoUrl && localStorage.getItem("brand-kit-active") === "true") {
-      return slides.map((s) => ({ ...s, logoUrl } as GeneratedSlide & { logoUrl: string }))
+    if (localStorage.getItem("brand-kit-active") === "true") {
+      // brand-kit-logo 키 우선, 없으면 nuance-brand-kit.logo 폴백
+      let logoUrl = localStorage.getItem("brand-kit-logo") || undefined
+      if (!logoUrl) {
+        try {
+          const kit = JSON.parse(localStorage.getItem("nuance-brand-kit") || "{}")
+          logoUrl = kit.logo || undefined
+        } catch {}
+      }
+      if (logoUrl) {
+        return slides.map((s) => ({ ...s, logoUrl } as GeneratedSlide & { logoUrl: string }))
+      }
     }
     return slides
   } catch {
@@ -224,6 +234,7 @@ function ResultsContent() {
         content: s.content,
         cta: s.cta,
         design: s.design,
+        logoUrl: (s as GeneratedSlide & { logoUrl?: string }).logoUrl,
       }))
     : fallbackSlides
 
