@@ -113,29 +113,27 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange }: EditorPr
             />
           )}
 
-          {/* 콘텐츠 */}
+          {/* 콘텐츠 — 수직 정렬 래퍼 */}
           <div
             className={cn(
-              "absolute inset-0 flex flex-col p-6 md:p-8 gap-4",
-              alignClass,
+              "absolute inset-0 flex flex-col p-6 md:p-8",
               verticalClass
             )}
             style={{ fontFamily: fontCss }}
           >
-            {/* 서브타이틀 */}
-            <div>
+            {/* 하나의 블록으로 묶어서 수직 위치 제어 */}
+            <div className={cn("flex flex-col gap-3", alignClass)}>
+              {/* 서브타이틀 */}
               {slide.subtitle && (
                 <p
-                  className="text-sm font-medium mb-2 opacity-80 whitespace-pre-line"
+                  className="text-sm font-medium opacity-80 whitespace-pre-line"
                   style={{ color: slide.bgStyle.titleColor }}
                 >
                   {slide.subtitle}
                 </p>
               )}
-            </div>
 
-            {/* 메인 타이틀 */}
-            <div className="flex-1 flex flex-col justify-center gap-4">
+              {/* 메인 타이틀 */}
               <h2
                 className={cn("font-bold leading-tight whitespace-pre-line", titleClass)}
                 style={{ color: slide.bgStyle.titleColor }}
@@ -143,26 +141,27 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange }: EditorPr
                 {slide.title || "제목을 입력하세요"}
               </h2>
 
+              {/* 본문 */}
               <p
                 className={cn("leading-relaxed whitespace-pre-line", contentClass)}
                 style={{ color: slide.bgStyle.textColor }}
               >
                 {slide.content || "내용을 입력하세요"}
               </p>
-            </div>
 
-            {/* CTA */}
-            <div className={cn("flex", slide.textAlign === "right" ? "justify-end" : slide.textAlign === "center" ? "justify-center" : "justify-start")}>
+              {/* CTA */}
               {slide.cta && (
-                <span
-                  className="inline-block px-5 py-2.5 text-sm font-bold rounded-full"
-                  style={{
-                    backgroundColor: slide.bgStyle.ctaBg,
-                    color: slide.bgStyle.ctaText,
-                  }}
-                >
-                  {slide.cta}
-                </span>
+                <div className={cn("flex", slide.textAlign === "right" ? "justify-end" : slide.textAlign === "center" ? "justify-center" : "justify-start")}>
+                  <span
+                    className="inline-block px-5 py-2.5 text-sm font-bold rounded-full"
+                    style={{
+                      backgroundColor: slide.bgStyle.ctaBg,
+                      color: slide.bgStyle.ctaText,
+                    }}
+                  >
+                    {slide.cta}
+                  </span>
+                </div>
               )}
             </div>
           </div>

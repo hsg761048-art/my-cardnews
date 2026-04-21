@@ -50,18 +50,16 @@ function SlideCard({ slide, index, total }: { slide: Slide; index: number; total
       )}
 
       <div
-        className={cn("absolute inset-0 flex flex-col p-6 gap-4", alignClass, verticalClass)}
+        className={cn("absolute inset-0 flex flex-col p-6", verticalClass)}
         style={{ fontFamily: fontCss }}
       >
-        <div>
+        <div className={cn("flex flex-col gap-3", alignClass)}>
           {slide.subtitle && (
-            <p className="text-sm font-medium mb-2 opacity-80 whitespace-pre-line"
+            <p className="text-sm font-medium opacity-80 whitespace-pre-line"
               style={{ color: slide.bgStyle.titleColor }}>
               {slide.subtitle}
             </p>
           )}
-        </div>
-        <div className="flex-1 flex flex-col justify-center gap-3">
           <h2 className={cn("font-bold leading-tight whitespace-pre-line", titleClass)}
             style={{ color: slide.bgStyle.titleColor }}>
             {slide.title}
@@ -70,16 +68,16 @@ function SlideCard({ slide, index, total }: { slide: Slide; index: number; total
             style={{ color: slide.bgStyle.textColor }}>
             {slide.content}
           </p>
-        </div>
-        <div className={cn("flex",
-          slide.textAlign === "right" ? "justify-end"
-            : slide.textAlign === "center" ? "justify-center"
-            : "justify-start")}>
           {slide.cta && (
-            <span className="inline-block px-5 py-2.5 text-sm font-bold rounded-full"
-              style={{ backgroundColor: slide.bgStyle.ctaBg, color: slide.bgStyle.ctaText }}>
-              {slide.cta}
-            </span>
+            <div className={cn("flex",
+              slide.textAlign === "right" ? "justify-end"
+                : slide.textAlign === "center" ? "justify-center"
+                : "justify-start")}>
+              <span className="inline-block px-5 py-2.5 text-sm font-bold rounded-full"
+                style={{ backgroundColor: slide.bgStyle.ctaBg, color: slide.bgStyle.ctaText }}>
+                {slide.cta}
+              </span>
+            </div>
           )}
         </div>
       </div>
