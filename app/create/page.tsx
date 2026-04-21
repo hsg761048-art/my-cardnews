@@ -109,12 +109,40 @@ export default function CreatePage() {
       localStorage.removeItem("library-current-id")
       localStorage.removeItem("library-editor-slides")
 
+      // 브랜드 키트 색상·폰트 강제 적용 함수
+      const applyBrandKit = (slides: unknown[]) => {
+        if (!useBrandKit || !brandKit || !Array.isArray(slides)) return slides
+        return slides.map((slide: unknown) => {
+          const s = slide as Record<string, unknown>
+          const bgStyle = (s.bgStyle ?? {}) as Record<string, unknown>
+          return {
+            ...s,
+            fontFamily: brandKit.font,
+            bgStyle: {
+              ...bgStyle,
+              background: brandKit.primaryColor,
+              titleColor: brandKit.secondaryColor,
+              textColor: brandKit.secondaryColor,
+              ctaBg: brandKit.accentColor,
+              ctaText: brandKit.secondaryColor,
+            },
+          }
+        })
+      }
+
+      const slidesByStyle = data.slidesByStyle ?? {}
+      const brandApplied = {
+        minimal: applyBrandKit(slidesByStyle.minimal ?? []),
+        bold:    applyBrandKit(slidesByStyle.bold ?? []),
+        elegant: applyBrandKit(slidesByStyle.elegant ?? []),
+      }
+
       // 생성된 슬라이드를 localStorage에 저장 → 에디터/결과 페이지가 읽음
       localStorage.setItem(
         "generated-card-slides",
         JSON.stringify({
-          slidesByStyle: data.slidesByStyle,  // 스타일별 3가지 버전
-          slides: data.slidesByStyle?.minimal, // 하위 호환용
+          slidesByStyle: brandApplied,
+          slides: brandApplied.minimal,
           provider: usedProvider,
           generatedAt: Date.now(),
         })
