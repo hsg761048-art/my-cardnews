@@ -105,6 +105,8 @@ export default function CreatePage() {
 
       // 원본 주제 저장 → 결과 페이지에서 이미지 검색 앵커로 사용
       localStorage.setItem("card-original-topic", raw.userPrompt.trim())
+      // 브랜드 키트 활성 여부 저장 → 결과 페이지에서 이미지 로딩 스킵 판단용
+      localStorage.setItem("brand-kit-active", useBrandKit && !!brandKit ? "true" : "false")
       // 새 카드뉴스이므로 이전 라이브러리 연결 초기화
       localStorage.removeItem("library-current-id")
       localStorage.removeItem("library-editor-slides")

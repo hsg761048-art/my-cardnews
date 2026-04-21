@@ -134,6 +134,11 @@ function ResultsContent() {
     setSlideImages({})
     setSlideImagesLoading({})
 
+    // 브랜드 키트 활성 시 이미지 로딩 건너뜀 (브랜드 컬러가 배경)
+    try {
+      if (localStorage.getItem("brand-kit-active") === "true") return
+    } catch {}
+
     if (bgSource === "flux") {
       // FLUX: 순차 실행
       ;(async () => {
