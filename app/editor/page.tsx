@@ -74,14 +74,19 @@ function toFontFamily(font: string | undefined): FontFamily {
 }
 
 // ─── localStorage에서 AI 생성 슬라이드 읽기 ──────────────────────
-function loadAISlides(): GeneratedSlide[] | null {
+// results 페이지와 동일한 로직: slidesByStyle[style] 우선, 구포맷 slides 폴백
+function loadAISlides(style: string = "minimal"): GeneratedSlide[] | null {
   try {
     const raw = localStorage.getItem("generated-card-slides")
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    // 5분 이내 생성된 것만 사용
-    if (Date.now() - parsed.generatedAt > 5 * 60 * 1000) return null
-    return parsed.slides as GeneratedSlide[]
+    // 15분 이내 생성된 것만 사용 (results 10분보다 여유있게 — 결과 페이지에서
+    // 디자인 검토하는 시간을 고려)
+    if (Date.now() - parsed.generatedAt > 15 * 60 * 1000) return null
+    // 새 포맷 (slidesByStyle) 우선, 구버전 (slides) 폴백
+    const slides: GeneratedSlide[] | undefined =
+      parsed.slidesByStyle?.[style] ?? parsed.slides
+    return slides && slides.length > 0 ? slides : null
   } catch {
     return null
   }
@@ -217,7 +222,9 @@ function EditorContent() {
   // 마운트 후 localStorage에서 실제 슬라이드 로드 (hydration mismatch 방지)
   useEffect(() => {
     const librarySlides = fromLibrary ? loadLibrarySlides() : null
-    const aiSlides = !librarySlides ? loadAISlides() : null
+    // URL의 style 파라미터를 존중 — 결과 페이지에서 "bold"를 보다가 편집으로 넘어오면
+    // bold 슬라이드를 로드해야 함
+    const aiSlides = !librarySlides ? loadAISlides(style) : null
 
     if (librarySlides && librarySlides.length > 0) {
       reset({ slides: librarySlides, globalFont: librarySlides[0]?.fontFamily ?? "pretendard" })
