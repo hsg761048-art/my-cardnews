@@ -17,7 +17,7 @@ export function Footer() {
             <p className="text-base text-white/70 leading-relaxed font-medium">
               내 머리속 카드뉴스로
               <br />
-              클릭 한번에 멋진 콘텐츠 제작.
+              클릭 한번에 전문가 콘텐츠 제작.
             </p>
           </div>
 
