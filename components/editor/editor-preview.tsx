@@ -115,11 +115,14 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange }: EditorPr
 
           {/* 콘텐츠 — 수직 정렬 래퍼 */}
           <div
-            className={cn(
-              "absolute inset-0 flex flex-col p-6 md:p-8",
-              verticalClass
-            )}
-            style={{ fontFamily: fontCss }}
+            className="absolute inset-0 flex flex-col p-6 md:p-8"
+            style={{
+              fontFamily: fontCss,
+              justifyContent:
+                (slide.verticalAlign ?? "middle") === "top" ? "flex-start"
+                : (slide.verticalAlign ?? "middle") === "bottom" ? "flex-end"
+                : "center",
+            }}
           >
             {/* 하나의 블록으로 묶어서 수직 위치 제어 */}
             <div className={cn("flex flex-col gap-3", alignClass)}>

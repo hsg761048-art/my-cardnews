@@ -50,8 +50,14 @@ function SlideCard({ slide, index, total }: { slide: Slide; index: number; total
       )}
 
       <div
-        className={cn("absolute inset-0 flex flex-col p-6", verticalClass)}
-        style={{ fontFamily: fontCss }}
+        className="absolute inset-0 flex flex-col p-6"
+        style={{
+          fontFamily: fontCss,
+          justifyContent:
+            (slide.verticalAlign ?? "middle") === "top" ? "flex-start"
+            : (slide.verticalAlign ?? "middle") === "bottom" ? "flex-end"
+            : "center",
+        }}
       >
         <div className={cn("flex flex-col gap-3", alignClass)}>
           {slide.subtitle && (
