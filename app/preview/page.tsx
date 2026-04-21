@@ -212,7 +212,7 @@ function ActionPanel({
           {/* 요약 */}
           <div className="px-3 py-2.5 rounded-xl bg-white/5 border border-white/8 text-xs space-y-1.5">
             <div className="flex justify-between text-white/40">
-              <span>슬라이드 수</span><span className="text-white/60">{slideCount}장</span>
+              <span>슬라이드 수</span><span className="text-white/60">{slides.length}장</span>
             </div>
             <div className="flex justify-between text-white/40">
               <span>선택 형식</span><span className="text-white/60">{selectedFormats.length}개</span>
