@@ -28,6 +28,7 @@ export interface Slide {
   fontFamily: FontFamily
   bgImagePrompt?: string  // AI가 생성한 배경 이미지 검색용 프롬프트
   bgImageUrl?: string     // 실제 로드된 배경 이미지 URL (Pexels / FLUX)
+  logoUrl?: string        // 브랜드 로고 URL (브랜드 키트 적용 시)
 }
 
 export interface EditorCardData {

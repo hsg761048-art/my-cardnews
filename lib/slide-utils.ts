@@ -42,6 +42,7 @@ export function aiSlidesToSlides(
   return aiSlides.map((s, i) => {
     const bgStyle = designToBgStyle(s.design)
     const fontFamily = toFontFamily(s.design?.fontFamily)
+    const raw = s as GeneratedSlide & { logoUrl?: string }
     return createDefaultSlide({
       title: s.title,
       subtitle: s.subtitle ?? "",
@@ -52,6 +53,7 @@ export function aiSlidesToSlides(
       textAlign: i === 0 ? "center" : "left",
       bgImagePrompt: s.design?.bgImagePrompt,
       bgImageUrl: slideImages[i] || undefined,
+      logoUrl: raw.logoUrl || undefined,
     })
   })
 }

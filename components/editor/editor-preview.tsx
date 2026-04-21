@@ -113,6 +113,17 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange }: EditorPr
             />
           )}
 
+          {/* 브랜드 로고 */}
+          {slide.logoUrl && (
+            <div className="absolute top-4 left-4 z-10">
+              <img
+                src={slide.logoUrl}
+                alt="brand logo"
+                className="h-8 max-w-[120px] object-contain"
+              />
+            </div>
+          )}
+
           {/* 콘텐츠 — 수직 정렬 래퍼 */}
           <div
             className="absolute inset-0 flex flex-col p-6 md:p-8"

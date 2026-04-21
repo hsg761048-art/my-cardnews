@@ -141,6 +141,7 @@ export default function CreatePage() {
           const design = (s.design ?? {}) as Record<string, unknown>
           return {
             ...s,
+            logoUrl: brandKit.logo ?? undefined,   // 브랜드 로고
             design: {
               ...design,
               background: brandKit.primaryColor,

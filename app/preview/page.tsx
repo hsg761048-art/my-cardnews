@@ -49,6 +49,17 @@ function SlideCard({ slide, index, total }: { slide: Slide; index: number; total
         <div className="absolute inset-0" style={{ background: slide.bgStyle.background }} />
       )}
 
+      {/* 브랜드 로고 */}
+      {slide.logoUrl && (
+        <div className="absolute top-4 left-4 z-10">
+          <img
+            src={slide.logoUrl}
+            alt="brand logo"
+            className="h-7 max-w-[100px] object-contain"
+          />
+        </div>
+      )}
+
       <div
         className="absolute inset-0 flex flex-col p-6"
         style={{
