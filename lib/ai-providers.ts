@@ -207,7 +207,20 @@ async function callGeminiModel(prompt: string, apiKey: string, model: string): P
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
   if (!text) return { ok: false, status: 200 }
 
-  const parsed = JSON.parse(text)
+  // JSON만 추출 (마크다운 코드블록 또는 trailing 텍스트 대응)
+  let jsonText = text.trim()
+  const codeBlockMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+  if (codeBlockMatch) {
+    jsonText = codeBlockMatch[1]
+  } else {
+    // JSON 오브젝트/배열 경계만 추출
+    const objStart = jsonText.indexOf("{")
+    const objEnd = jsonText.lastIndexOf("}")
+    if (objStart !== -1 && objEnd !== -1) {
+      jsonText = jsonText.slice(objStart, objEnd + 1)
+    }
+  }
+  const parsed = JSON.parse(jsonText)
   return { ok: true, slides: parsed.slides as GeneratedSlide[] }
 }
 
