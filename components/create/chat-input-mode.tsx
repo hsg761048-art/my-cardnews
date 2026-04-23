@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 
 interface ChatInputModeProps {
   onGenerate: (userPrompt: string) => void
+  geminiApiKey?: string
 }
 
 interface Message {
@@ -22,7 +23,7 @@ const initialMessages: Message[] = [
   {
     id: "1",
     role: "assistant",
-    content: "안녕하세요! 🎨 어떤 카드뉴스를 만들고 싶으세요?\n\n아래 예시처럼 편하게 말씀해 주시면 바로 만들어드릴게요!",
+    content: "안녕하세요! 🎨 어떤 카드뉴스를 만들고 싶으세요?\n\n주제와 핵심 내용을 편하게 말씀해 주시면, 함께 멋진 카드뉴스를 만들어드릴게요!",
   },
   {
     id: "2",
@@ -40,7 +41,7 @@ const suggestedPrompts = [
   "📣 서비스 업데이트 안내",
 ]
 
-export function ChatInputMode({ onGenerate }: ChatInputModeProps) {
+export function ChatInputMode({ onGenerate, geminiApiKey }: ChatInputModeProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
@@ -94,24 +95,69 @@ export function ChatInputMode({ onGenerate }: ChatInputModeProps) {
       role: "user",
       content: input.trim(),
     }
-    setMessages(prev => [...prev, userMessage])
+
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
     setInput("")
     setIsTyping(true)
 
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    try {
+      // 시스템 초기 메시지 제외하고 실제 대화만 전송
+      const conversationHistory = updatedMessages
+        .slice(initialMessages.length)
+        .map(m => ({ role: m.role, content: m.content }))
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: `"${userMessage.content}"에 대한 카드뉴스를 만들어 드리겠습니다. 지금 바로 생성할까요, 아니면 더 추가하실 내용이 있으신가요?`,
+      const apiKey = geminiApiKey || (() => {
+        try { return localStorage.getItem("ai-key-gemini") || undefined } catch { return undefined }
+      })()
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: conversationHistory,
+          geminiApiKey: apiKey,
+        }),
+      })
+
+      const data = await res.json()
+      const reply = data.reply || "죄송해요, 잠시 후 다시 시도해주세요."
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: reply,
+      }
+      setMessages(prev => [...prev, assistantMessage])
+    } catch {
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "네, 알겠습니다! 더 추가하실 내용이 있으신가요? 준비가 되시면 '지금 카드뉴스 생성하기' 버튼을 눌러주세요 🎨",
+      }
+      setMessages(prev => [...prev, assistantMessage])
+    } finally {
+      setIsTyping(false)
     }
-    setMessages(prev => [...prev, assistantMessage])
-    setIsTyping(false)
   }
 
   const handleGenerateNow = () => {
-    const userContent = messages.filter(m => m.role === "user").map(m => m.content).join("\n")
-    onGenerate(userContent || "카드뉴스를 만들어주세요")
+    // 전체 대화 내용을 요약해서 카드뉴스 생성 프롬프트로 전달
+    const userMessages = messages
+      .filter(m => m.role === "user")
+      .map(m => m.content)
+    const assistantInsights = messages
+      .filter(m => m.role === "assistant" && !initialMessages.find(im => im.id === m.id))
+      .map(m => m.content)
+
+    const fullContext = [
+      "=== 사용자 요청 ===",
+      userMessages.join("\n"),
+      assistantInsights.length > 0 ? "\n=== AI와 논의된 추가 내용 ===" : "",
+      assistantInsights.join("\n"),
+    ].filter(Boolean).join("\n")
+
+    onGenerate(fullContext || "카드뉴스를 만들어주세요")
   }
 
   const handleSuggestion = (prompt: string) => {
@@ -133,14 +179,12 @@ export function ChatInputMode({ onGenerate }: ChatInputModeProps) {
           <p className="text-sm text-slate-400">카드뉴스 생성 어시스턴트</p>
         </div>
         <div className="ml-auto flex items-center gap-3">
-          {/* 저장 상태 */}
           {savedAt && (
             <span className="flex items-center gap-1 text-xs text-slate-400">
               <Save className="w-3 h-3" />
               {savedAt} 저장
             </span>
           )}
-          {/* 초기화 버튼 */}
           {hasUserMsg && (
             <button
               type="button"
@@ -181,7 +225,7 @@ export function ChatInputMode({ onGenerate }: ChatInputModeProps) {
               )}
             </div>
             <div className={cn(
-              "px-4 py-3 max-w-[80%] rounded-2xl text-base leading-relaxed shadow-sm",
+              "px-4 py-3 max-w-[80%] rounded-2xl text-base leading-relaxed shadow-sm whitespace-pre-line",
               message.role === "assistant"
                 ? "bg-white border border-slate-100 text-slate-700 rounded-tl-sm"
                 : "bg-gradient-to-br from-lime-400 to-green-500 text-white rounded-tr-sm"

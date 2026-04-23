@@ -344,7 +344,10 @@ export default function CreatePage() {
               <UrlInputMode onGenerate={(p) => handleGenerate({ mode: "url", userPrompt: p })} />
             )}
             {selectedMode === "chat" && (
-              <ChatInputMode onGenerate={(p) => handleGenerate({ mode: "chat", userPrompt: p })} />
+              <ChatInputMode
+                onGenerate={(p) => handleGenerate({ mode: "chat", userPrompt: p })}
+                geminiApiKey={apiKey || (() => { try { return localStorage.getItem("ai-key-gemini") || undefined } catch { return undefined } })()}
+              />
             )}
             {selectedMode === "form" && (
               <FormInputMode onGenerate={(p) => handleGenerate({ mode: "form", userPrompt: p })} />
