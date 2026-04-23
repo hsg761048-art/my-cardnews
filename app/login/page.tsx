@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect } from "react"
+import { Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, Sparkles } from "lucide-react"
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, loading, configured, signInWithGoogle, signInWithKakao, signInWithNaver } = useAuth()
@@ -119,5 +119,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#1a1a2e] flex items-center justify-center">
+        <div className="text-white/70 text-sm">로딩 중...</div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
