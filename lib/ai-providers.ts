@@ -209,17 +209,36 @@ async function callGeminiModel(prompt: string, apiKey: string, model: string): P
 
   // JSON만 추출 (마크다운 코드블록 또는 trailing 텍스트 대응)
   let jsonText = text.trim()
+
+  // 1) 마크다운 코드블록 우선 시도
   const codeBlockMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
   if (codeBlockMatch) {
     jsonText = codeBlockMatch[1]
   } else {
-    // JSON 오브젝트/배열 경계만 추출
-    const objStart = jsonText.indexOf("{")
-    const objEnd = jsonText.lastIndexOf("}")
-    if (objStart !== -1 && objEnd !== -1) {
-      jsonText = jsonText.slice(objStart, objEnd + 1)
+    // 2) 첫 번째 완전한 JSON 오브젝트를 brace-depth로 정확히 추출
+    //    (lastIndexOf 방식은 JSON 뒤 trailing 텍스트가 있으면 실패)
+    const start = jsonText.indexOf("{")
+    if (start !== -1) {
+      let depth = 0
+      let inString = false
+      let escaped = false
+      let end = -1
+      for (let i = start; i < jsonText.length; i++) {
+        const ch = jsonText[i]
+        if (escaped)          { escaped = false; continue }
+        if (ch === "\\" && inString) { escaped = true; continue }
+        if (ch === '"')       { inString = !inString; continue }
+        if (inString)         { continue }
+        if (ch === "{")       { depth++ }
+        else if (ch === "}") {
+          depth--
+          if (depth === 0)    { end = i; break }
+        }
+      }
+      if (end !== -1) jsonText = jsonText.slice(start, end + 1)
     }
   }
+
   const parsed = JSON.parse(jsonText)
   return { ok: true, slides: parsed.slides as GeneratedSlide[] }
 }
