@@ -36,6 +36,8 @@ export async function GET(req: NextRequest) {
     })
     if (clientSecret) tokenParams.append("client_secret", clientSecret)
 
+    console.log("[kakao] 토큰 교환 시작, redirect_uri:", `${site}/api/auth/kakao/callback`)
+
     const tokenRes = await fetch("https://kauth.kakao.com/oauth/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded;charset=utf-8" },
@@ -48,7 +50,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(`${site}/login?error=kakao_token_failed`)
     }
 
-    const { access_token } = await tokenRes.json()
+    const tokenData = await tokenRes.json()
+    const { access_token } = tokenData
+    console.log("[kakao] 토큰 교환 성공")
 
     // 2. access token → 사용자 정보
     const userRes = await fetch("https://kapi.kakao.com/v2/user/me", {
@@ -56,6 +60,8 @@ export async function GET(req: NextRequest) {
     })
 
     if (!userRes.ok) {
+      const errText = await userRes.text()
+      console.error("[kakao] 사용자 조회 실패:", errText)
       return NextResponse.redirect(`${site}/login?error=kakao_user_failed`)
     }
 
@@ -64,36 +70,60 @@ export async function GET(req: NextRequest) {
     const email = kakaoUser.kakao_account?.email
     const displayName = kakaoUser.kakao_account?.profile?.nickname
     const photoURL = kakaoUser.kakao_account?.profile?.profile_image_url
+    console.log("[kakao] 사용자 조회 성공, uid:", uid)
 
-    // 3. Firebase 커스텀 토큰 발급
-    const adminAuth = getAdminAuth()
+    // 3. Firebase Admin 초기화 확인
+    let adminAuth
+    try {
+      adminAuth = getAdminAuth()
+    } catch (adminInitErr) {
+      console.error("[kakao] Firebase Admin 초기화 오류:", adminInitErr)
+      return NextResponse.redirect(`${site}/login?error=admin_init_failed`)
+    }
+
     if (!adminAuth) {
+      console.error("[kakao] Firebase Admin 초기화 실패: getAdminAuth() returned null")
       return NextResponse.redirect(`${site}/login?error=admin_not_ready`)
     }
 
-    // 사용자 프로필 업데이트/생성
+    // 4. 사용자 프로필 업데이트/생성
     try {
       await adminAuth.updateUser(uid, {
         displayName,
         photoURL,
         ...(email ? { email } : {}),
       })
+      console.log("[kakao] 사용자 업데이트 성공")
     } catch {
       // 사용자가 없으면 생성
-      await adminAuth.createUser({
-        uid,
-        displayName,
-        photoURL,
-        ...(email ? { email } : {}),
-      })
+      try {
+        await adminAuth.createUser({
+          uid,
+          displayName,
+          photoURL,
+          ...(email ? { email } : {}),
+        })
+        console.log("[kakao] 사용자 생성 성공")
+      } catch (createErr) {
+        console.error("[kakao] 사용자 생성 오류:", createErr)
+        return NextResponse.redirect(`${site}/login?error=user_create_failed`)
+      }
     }
 
-    const customToken = await adminAuth.createCustomToken(uid, { provider: "kakao" })
+    // 5. 커스텀 토큰 발급
+    let customToken
+    try {
+      customToken = await adminAuth.createCustomToken(uid, { provider: "kakao" })
+      console.log("[kakao] 커스텀 토큰 발급 성공")
+    } catch (tokenErr) {
+      console.error("[kakao] 커스텀 토큰 발급 오류:", tokenErr)
+      return NextResponse.redirect(`${site}/login?error=custom_token_failed`)
+    }
 
-    // 4. 클라이언트로 토큰 전달 → 자동 로그인
+    // 6. 클라이언트로 토큰 전달 → 자동 로그인
     return NextResponse.redirect(`${site}/?token=${customToken}&auth=kakao`)
   } catch (err) {
-    console.error("[kakao] OAuth 처리 오류:", err)
+    console.error("[kakao] OAuth 처리 오류 (예상치 못한 예외):", err)
     return NextResponse.redirect(`${site}/login?error=kakao_internal`)
   }
 }
