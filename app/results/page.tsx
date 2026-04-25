@@ -85,9 +85,16 @@ function ResultsContent() {
   // 유저 원본 주제 ("새로운 스카프 출시" 같은 입력) → 이미지 검색 앵커
   const [originalTopic, setOriginalTopic] = useState("")
 
-  // 슬라이드별 배경 이미지 상태
+  // 슬라이드별 배경 이미지 상태 (API fetch)
   const [slideImages, setSlideImages] = useState<Record<number, string>>({})
   const [slideImagesLoading, setSlideImagesLoading] = useState<Record<number, boolean>>({})
+  // 사용자 직접 업로드 이미지 (스타일별로 유지)
+  const [customSlideImages, setCustomSlideImages] = useState<Record<number, string>>({})
+
+  // 업로드 이미지 핸들러
+  const handleImageUpload = useCallback((slideIndex: number, dataUrl: string) => {
+    setCustomSlideImages(prev => ({ ...prev, [slideIndex]: dataUrl }))
+  }, [])
 
   // 스타일 변경 시 해당 스타일의 슬라이드 로드 + 원본 주제 읽기
   useEffect(() => {
@@ -322,8 +329,9 @@ function ResultsContent() {
                 card={currentCard}
                 selectedSlide={selectedSlide}
                 onSlideChange={setSelectedSlide}
-                slideImages={slideImages}
+                slideImages={{ ...slideImages, ...customSlideImages }}
                 slideImagesLoading={slideImagesLoading}
+                onImageUpload={handleImageUpload}
               />
             </div>
             <div className="lg:col-span-1">

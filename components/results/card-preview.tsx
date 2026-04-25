@@ -1,16 +1,19 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2, Upload, ImagePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRef } from "react"
+import { processImageFile } from "@/lib/image-upload"
 import type { GeneratedCard } from "@/app/results/page"
 
 interface CardPreviewProps {
   card: GeneratedCard
   selectedSlide: number
   onSlideChange: (index: number) => void
-  slideImages?: Record<number, string>   // 슬라이드별 Pexels 이미지
+  slideImages?: Record<number, string>   // 슬라이드별 배경 이미지 (Pexels/FLUX)
   slideImagesLoading?: Record<number, boolean>  // 슬라이드별 로딩 상태
+  onImageUpload?: (slideIndex: number, dataUrl: string) => void  // 직접 업로드 콜백
 }
 
 const FONT_CSS: Record<string, string> = {
@@ -37,7 +40,34 @@ export function CardPreview({
   onSlideChange,
   slideImages = {},
   slideImagesLoading = {},
+  onImageUpload,
 }: CardPreviewProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const thumbInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const handleMainUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !onImageUpload) return
+    try {
+      const dataUrl = await processImageFile(file, { maxSize: 1200 })
+      onImageUpload(selectedSlide, dataUrl)
+    } catch (err) {
+      console.error("이미지 업로드 실패:", err)
+    }
+    e.target.value = ""
+  }
+
+  const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const file = e.target.files?.[0]
+    if (!file || !onImageUpload) return
+    try {
+      const dataUrl = await processImageFile(file, { maxSize: 1200 })
+      onImageUpload(index, dataUrl)
+    } catch (err) {
+      console.error("이미지 업로드 실패:", err)
+    }
+    e.target.value = ""
+  }
   const currentSlide = card.slides[selectedSlide]
   const design = currentSlide.design
   const bgImage = slideImages[selectedSlide]
@@ -62,6 +92,15 @@ export function CardPreview({
 
   return (
     <div className="bg-muted/50 border border-border p-6 md:p-8">
+      {/* 메인 업로드 hidden input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleMainUpload}
+      />
+
       {/* Preview Label */}
       <div className="flex items-center justify-between mb-6">
         <span className="text-sm text-slate-600 font-medium flex items-center gap-2">
@@ -75,15 +114,28 @@ export function CardPreview({
             </span>
           )}
         </span>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={goToPrevious} disabled={selectedSlide === 0}
-            className="rounded-none hover:bg-foreground hover:text-background disabled:opacity-30">
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={goToNext} disabled={selectedSlide === card.slides.length - 1}
-            className="rounded-none hover:bg-foreground hover:text-background disabled:opacity-30">
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+        <div className="flex items-center gap-2">
+          {/* 이미지 직접 업로드 버튼 */}
+          {onImageUpload && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+              title="이 슬라이드 배경 이미지 직접 업로드"
+            >
+              <ImagePlus className="w-3.5 h-3.5" />
+              이미지 교체
+            </button>
+          )}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={goToPrevious} disabled={selectedSlide === 0}
+              className="rounded-none hover:bg-foreground hover:text-background disabled:opacity-30">
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={goToNext} disabled={selectedSlide === card.slides.length - 1}
+              className="rounded-none hover:bg-foreground hover:text-background disabled:opacity-30">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -170,25 +222,45 @@ export function CardPreview({
           const thumbImage = slideImages[index]
           const thumbLoading = slideImagesLoading[index]
           return (
-            <button key={index} onClick={() => onSlideChange(index)}
-              className={cn(
-                "shrink-0 w-16 aspect-square p-2 flex flex-col justify-between transition-all relative overflow-hidden",
-                index === selectedSlide
-                  ? "ring-2 ring-primary ring-offset-2 ring-offset-muted/50"
-                  : "opacity-50 hover:opacity-80"
+            <div key={index} className="relative shrink-0 group">
+              {/* 썸네일 hidden input */}
+              <input
+                ref={(el) => { thumbInputRefs.current[index] = el }}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleThumbUpload(e, index)}
+              />
+              <button onClick={() => onSlideChange(index)}
+                className={cn(
+                  "w-16 aspect-square p-2 flex flex-col justify-between transition-all relative overflow-hidden",
+                  index === selectedSlide
+                    ? "ring-2 ring-primary ring-offset-2 ring-offset-muted/50"
+                    : "opacity-50 hover:opacity-80"
+                )}
+                style={thumbImage
+                  ? { backgroundImage: `url(${thumbImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+                  : thumbDesign ? { background: thumbDesign.background } : { background: "#1a1a2e" }
+                }
+              >
+                {thumbImage && <div className="absolute inset-0 bg-black/30" />}
+                {thumbLoading && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><Loader2 className="w-3 h-3 text-white animate-spin" /></div>}
+                <div className="w-3 h-0.5 relative z-10" style={{ backgroundColor: thumbDesign?.titleColor ?? "#fff", opacity: 0.6 }} />
+                <p className="text-[6px] font-medium truncate relative z-10" style={{ color: thumbDesign?.titleColor ?? "#fff" }}>
+                  {slide.title}
+                </p>
+              </button>
+              {/* 업로드 아이콘 — hover 시 표시 */}
+              {onImageUpload && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); thumbInputRefs.current[index]?.click() }}
+                  className="absolute bottom-0 right-0 w-5 h-5 bg-black/70 hover:bg-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  title="이 슬라이드 이미지 교체"
+                >
+                  <Upload className="w-2.5 h-2.5 text-white" />
+                </button>
               )}
-              style={thumbImage
-                ? { backgroundImage: `url(${thumbImage})`, backgroundSize: "cover", backgroundPosition: "center" }
-                : thumbDesign ? { background: thumbDesign.background } : { background: "#1a1a2e" }
-              }
-            >
-              {thumbImage && <div className="absolute inset-0 bg-black/30" />}
-              {thumbLoading && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><Loader2 className="w-3 h-3 text-white animate-spin" /></div>}
-              <div className="w-3 h-0.5 relative z-10" style={{ backgroundColor: thumbDesign?.titleColor ?? "#fff", opacity: 0.6 }} />
-              <p className="text-[6px] font-medium truncate relative z-10" style={{ color: thumbDesign?.titleColor ?? "#fff" }}>
-                {slide.title}
-              </p>
-            </button>
+            </div>
           )
         })}
       </div>
