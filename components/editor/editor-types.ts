@@ -254,5 +254,4 @@ export interface ExtraText {
   bold: boolean
   offset: { x: number; y: number }
   width?: number
-  fontSize?: string  // Tailwind class e.g. "text-base"
 }
