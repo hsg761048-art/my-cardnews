@@ -11,7 +11,7 @@ import { AIProviderSelector } from "@/components/create/ai-provider-selector"
 import { WatercolorBackground } from "@/components/ui/watercolor-background"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Palette, ChevronRight } from "lucide-react"
+import { Palette, ChevronRight, Layers } from "lucide-react"
 import Link from "next/link"
 import type { AIProvider } from "@/lib/ai-providers"
 import type { BrandKitData } from "@/app/brand-kit/page"
@@ -28,6 +28,8 @@ export default function CreatePage() {
   const [selectedMode, setSelectedMode] = useState<InputMode>("chat")
   const [isGenerating, setIsGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
+
+  const [slideCount, setSlideCount] = useState(5)
 
   // AI Provider 설정
   const [provider, setProvider] = useState<AIProvider>("gemini")
@@ -85,7 +87,7 @@ export default function CreatePage() {
           // 폴백용으로 두 키 모두 전달
           geminiApiKey: (() => { try { return localStorage.getItem("ai-key-gemini") || undefined } catch { return undefined } })(),
           claudeApiKey: (() => { try { return localStorage.getItem("ai-key-claude") || undefined } catch { return undefined } })(),
-          slideCount: 5,
+          slideCount: slideCount,
           // 브랜드 키트 토글이 ON이고 키트가 있을 때만 전달
           brandKit: useBrandKit && brandKit
             ? {
@@ -319,6 +321,38 @@ export default function CreatePage() {
                 </span>
               </div>
             )}
+          </div>
+
+
+          {/* 슬라이드 장수 선택 */}
+          <div className="mb-8">
+            <div className="glass-card rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-primary/20 to-pink-400/20 flex items-center justify-center">
+                  <Layers className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">슬라이드 장수 선택</p>
+                  <p className="text-xs text-foreground/50">선택한 장수만큼 카드뉴스가 생성됩니다</p>
+                </div>
+                <span className="ml-auto text-sm font-bold text-primary">{slideCount}장</span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setSlideCount(n)}
+                    className={`w-10 h-10 text-sm font-medium rounded-xl border transition-all duration-150 ${
+                      slideCount === n
+                        ? "bg-primary text-white border-primary shadow-md"
+                        : "bg-background text-foreground border-border hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Mode Selector */}
