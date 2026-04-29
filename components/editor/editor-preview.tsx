@@ -1,14 +1,13 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
-import { ChevronLeft, ChevronRight, Smartphone, Square, Copy, Clipboard, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Smartphone, Square, Copy, Clipboard, X, Bold, Move } from "lucide-react"
 import type { Slide, ExtraText } from "./editor-types"
 import { FONT_OPTIONS, FONT_SIZE_MAP, CONTENT_SIZE_MAP, ALIGN_MAP, PRODUCT_IMAGE_SIZE_MAP } from "./editor-types"
 
 type AspectMode = "square" | "story"
-type TextFieldKey = "subtitle" | "title" | "content" | "cta"
-type SelTarget = { kind: "field"; field: TextFieldKey } | { kind: "extra"; id: string }
+type FieldKey = "subtitle" | "title" | "content" | "cta"
 interface ClipItem { content: string; color: string; bold: boolean }
 
 interface EditorPreviewProps {
@@ -18,12 +17,156 @@ interface EditorPreviewProps {
   onSlideUpdate?: (updates: Partial<Slide>) => void
 }
 
+// ─── Module-level TextBlock component (NOT inside EditorPreview) ───────────
+interface TextBlockProps {
+  targetId: string
+  targetKind: "field" | "extra"
+  offset: { x: number; y: number }
+  widthStyle: string
+  bold: boolean
+  isSelected: boolean
+  isEditing: boolean
+  editingValue: string
+  isDragging: boolean
+  isResizing: boolean
+  storedW?: number
+  onPointerDownMove: (e: React.PointerEvent) => void
+  onPointerDownResize: (e: React.PointerEvent) => void
+  onClickItem: (e: React.MouseEvent) => void
+  onBold: (e: React.MouseEvent) => void
+  onCopy: (e: React.MouseEvent) => void
+  onDelete?: (e: React.MouseEvent) => void
+  onEditChange: (val: string, el: HTMLTextAreaElement) => void
+  onEditBlur: () => void
+  onEditKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  children: React.ReactNode
+}
+
+function TextBlock({
+  targetId, targetKind, offset, widthStyle, bold,
+  isSelected, isEditing, editingValue,
+  isDragging, isResizing, storedW,
+  onPointerDownMove, onPointerDownResize, onClickItem,
+  onBold, onCopy, onDelete,
+  onEditChange, onEditBlur, onEditKeyDown,
+  children,
+}: TextBlockProps) {
+  return (
+    <div
+      className={cn("relative group", !isEditing && "cursor-pointer")}
+      style={{
+        transform: `translate(${offset.x}px, ${offset.y}px)`,
+        transition: isDragging ? "none" : "transform 0.1s ease",
+        width: widthStyle,
+        minWidth: "4ch",
+        zIndex: isSelected || isEditing ? 20 : undefined,
+      }}
+      onClick={onClickItem}
+    >
+      {/* Selection / hover border */}
+      <div className={cn(
+        "absolute -inset-1.5 rounded pointer-events-none border-2 transition-all",
+        isSelected || isEditing
+          ? "opacity-100 border-blue-400 bg-blue-400/5"
+          : "opacity-0 group-hover:opacity-70 border-white/50"
+      )} />
+
+      {/* Hover hint */}
+      {!isSelected && !isEditing && (
+        <div className="absolute -top-6 left-0 opacity-0 group-hover:opacity-100 pointer-events-none z-30 transition-opacity">
+          <span className="text-[10px] bg-black/70 text-white px-2 py-0.5 rounded whitespace-nowrap">클릭: 선택</span>
+        </div>
+      )}
+
+      {/* Toolbar */}
+      {(isSelected || isEditing) && (
+        <div
+          className="absolute -top-11 left-0 flex items-center gap-1 bg-black/85 backdrop-blur-sm rounded-xl px-2 py-1.5 z-50 shadow-xl"
+          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+        >
+          {/* Drag handle */}
+          <div
+            className="w-7 h-7 flex items-center justify-center rounded text-white/50 hover:bg-white/20 hover:text-white cursor-move transition-all"
+            onPointerDown={onPointerDownMove}
+            title="드래그하여 이동"
+          >
+            <Move className="w-3.5 h-3.5" />
+          </div>
+          <div className="w-px h-4 bg-white/20 mx-0.5" />
+          <button
+            onClick={onBold}
+            title="굵게"
+            className={cn("w-7 h-7 flex items-center justify-center rounded text-sm font-black transition-all",
+              bold ? "bg-blue-500 text-white" : "text-white/70 hover:bg-white/20 hover:text-white")}
+          >B</button>
+          <div className="w-px h-4 bg-white/20 mx-0.5" />
+          <button
+            onClick={onCopy}
+            title="복사"
+            className="w-7 h-7 flex items-center justify-center rounded text-white/70 hover:bg-white/20 hover:text-white transition-all"
+          ><Copy className="w-3.5 h-3.5" /></button>
+          {onDelete && (
+            <>
+              <div className="w-px h-4 bg-white/20 mx-0.5" />
+              <button
+                onClick={onDelete}
+                title="삭제"
+                className="w-7 h-7 flex items-center justify-center rounded text-red-400 hover:bg-red-500/20 transition-all"
+              ><X className="w-3.5 h-3.5" /></button>
+            </>
+          )}
+          <div className="w-px h-4 bg-white/20 mx-0.5" />
+          <span className="text-white/40 text-[10px] whitespace-nowrap">
+            {isEditing ? "Enter·저장 Esc·취소" : "클릭: 편집"}
+          </span>
+        </div>
+      )}
+
+      {/* Resize handle */}
+      {(isSelected || isEditing) && (
+        <div
+          className="absolute -right-3 top-0 bottom-0 w-5 flex items-center justify-center cursor-ew-resize z-40"
+          onPointerDown={onPointerDownResize}
+          onClick={e => e.stopPropagation()}
+          title="드래그하여 너비 조절"
+        >
+          <div className={cn("w-1.5 h-8 rounded-full", isResizing ? "bg-blue-300" : "bg-blue-500/70 hover:bg-blue-400")} />
+        </div>
+      )}
+
+      {/* Content: textarea if editing, else static */}
+      {isEditing ? (
+        <textarea
+          autoFocus
+          className="block w-full bg-transparent outline-none resize-none overflow-hidden cursor-text"
+          style={{
+            color: "inherit", fontFamily: "inherit", fontSize: "inherit",
+            fontWeight: "inherit", lineHeight: "inherit",
+            textAlign: "inherit" as React.CSSProperties["textAlign"],
+            padding: 0, border: "none", margin: 0,
+          }}
+          value={editingValue}
+          onChange={e => onEditChange(e.target.value, e.target)}
+          onBlur={onEditBlur}
+          onKeyDown={onEditKeyDown}
+          onClick={e => e.stopPropagation()}
+        />
+      ) : (
+        <div style={{ fontWeight: bold ? 700 : undefined }}>{children}</div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main EditorPreview ────────────────────────────────────────────────────
 export function EditorPreview({ slides, selectedIndex, onSlideChange, onSlideUpdate }: EditorPreviewProps) {
   const [aspectMode, setAspectMode] = useState<AspectMode>("square")
-  const [sel, setSel] = useState<SelTarget | null>(null)
-  const [editingField, setEditingField] = useState<TextFieldKey | null>(null)
-  const [editingExtraId, setEditingExtraId] = useState<string | null>(null)
-  const [editingValue, setEditingValue] = useState("")
+  // sel: which element is selected (targetId) and its kind
+  const [sel, setSel] = useState<{ id: string; kind: "field" | "extra" } | null>(null)
+  // editing: which element is being edited inline
+  const [editing, setEditing] = useState<{ id: string; kind: "field" | "extra" } | null>(null)
+  const [editValue, setEditValue] = useState("")
   const [liveOffset, setLiveOffset] = useState<{ id: string; x: number; y: number } | null>(null)
   const [liveWidth, setLiveWidth] = useState<{ id: string; w: number } | null>(null)
   const [clip, setClip] = useState<ClipItem | null>(null)
@@ -31,52 +174,50 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange, onSlideUpd
   const cardRef = useRef<HTMLDivElement>(null)
   const slideRef = useRef(slides[selectedIndex])
   const onUpdateRef = useRef(onSlideUpdate)
-  const selRef = useRef<SelTarget | null>(null)
-  const liveWidthRef = useRef<{ id: string; w: number } | null>(null)
 
-  // dragRef: tracks active move-drag state
-  const dragRef = useRef<{
+  // Drag tracking refs
+  const moveDrag = useRef<{
+    pointerId: number; el: Element
     targetId: string; targetKind: "field" | "extra"
-    sx: number; sy: number; ox: number; oy: number; lx: number; ly: number
+    sx: number; sy: number; ox: number; oy: number; lx: number; ly: number; moved: boolean
   } | null>(null)
-  // resizeRef: tracks active resize state
-  const resizeRef = useRef<{
+  const resizeDrag = useRef<{
+    pointerId: number; el: Element
     targetId: string; targetKind: "field" | "extra"
-    sw: number; cw: number; sx: number
+    sx: number; sw: number; cw: number
   } | null>(null)
-  // wasMovedRef: becomes true if the mouse moved enough to be a drag (suppresses onClick)
-  const wasMovedRef = useRef(false)
 
   useEffect(() => {
     slideRef.current = slides[selectedIndex]
     onUpdateRef.current = onSlideUpdate
   })
 
-  const setSel2 = (s: SelTarget | null) => { selRef.current = s; setSel(s) }
-  const setLW2 = (v: { id: string; w: number } | null) => { liveWidthRef.current = v; setLiveWidth(v) }
-
-  // ── Global mouse handlers ─────────────────────────────────────
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (dragRef.current) {
-        const d = dragRef.current
-        const dx = e.clientX - d.sx, dy = e.clientY - d.sy
-        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) wasMovedRef.current = true
-        if (wasMovedRef.current) {
-          d.lx = d.ox + dx; d.ly = d.oy + dy
-          setLiveOffset({ id: d.targetId, x: d.lx, y: d.ly })
-        }
-      } else if (resizeRef.current) {
-        const r = resizeRef.current
-        const dx = e.clientX - r.sx
-        const pw = Math.max(r.cw * 0.15, r.sw + dx)
-        setLW2({ id: r.targetId, w: Math.min(100, (pw / r.cw) * 100) })
+  // ── Pointer-capture drag handlers ─────────────────────────────
+  const handlePointerMoveGlobal = useCallback((e: PointerEvent) => {
+    if (moveDrag.current && e.pointerId === moveDrag.current.pointerId) {
+      const d = moveDrag.current
+      const dx = e.clientX - d.sx, dy = e.clientY - d.sy
+      if (!d.moved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) d.moved = true
+      if (d.moved) {
+        d.lx = d.ox + dx; d.ly = d.oy + dy
+        setLiveOffset({ id: d.targetId, x: d.lx, y: d.ly })
       }
     }
-    const onUp = () => {
-      const slide = slideRef.current
-      if (dragRef.current && wasMovedRef.current) {
-        const d = dragRef.current
+    if (resizeDrag.current && e.pointerId === resizeDrag.current.pointerId) {
+      const r = resizeDrag.current
+      const dx = e.clientX - r.sx
+      const pw = Math.max(r.cw * 0.15, r.sw + dx)
+      const pct = Math.min(100, (pw / r.cw) * 100)
+      setLiveWidth({ id: r.targetId, w: pct })
+    }
+  }, [])
+
+  const handlePointerUpGlobal = useCallback((e: PointerEvent) => {
+    const slide = slideRef.current
+    if (moveDrag.current && e.pointerId === moveDrag.current.pointerId) {
+      const d = moveDrag.current
+      try { d.el.releasePointerCapture(d.pointerId) } catch {}
+      if (d.moved) {
         if (d.targetKind === "field") {
           onUpdateRef.current?.({ textOffsets: { ...(slide.textOffsets ?? {}), [d.targetId]: { x: d.lx, y: d.ly } } })
         } else {
@@ -84,22 +225,31 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange, onSlideUpd
         }
         setLiveOffset(null)
       }
-      if (resizeRef.current) {
-        const lw = liveWidthRef.current
-        const r = resizeRef.current
-        if (lw) {
-          if (r.targetKind === "field") onUpdateRef.current?.({ textWidths: { ...(slide.textWidths ?? {}), [r.targetId]: lw.w } })
-          else onUpdateRef.current?.({ extraTexts: (slide.extraTexts ?? []).map(ex => ex.id === r.targetId ? { ...ex, width: lw.w } : ex) })
-          setLW2(null)
-        }
-      }
-      dragRef.current = null
-      resizeRef.current = null
+      moveDrag.current = null
     }
-    window.addEventListener("mousemove", onMove)
-    window.addEventListener("mouseup", onUp)
-    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp) }
+    if (resizeDrag.current && e.pointerId === resizeDrag.current.pointerId) {
+      const r = resizeDrag.current
+      try { r.el.releasePointerCapture(r.pointerId) } catch {}
+      setLiveWidth(prev => {
+        if (prev && prev.id === r.targetId) {
+          if (r.targetKind === "field") onUpdateRef.current?.({ textWidths: { ...(slide.textWidths ?? {}), [r.targetId]: prev.w } })
+          else onUpdateRef.current?.({ extraTexts: (slide.extraTexts ?? []).map(ex => ex.id === r.targetId ? { ...ex, width: prev.w } : ex) })
+          return null
+        }
+        return prev
+      })
+      resizeDrag.current = null
+    }
   }, [])
+
+  useEffect(() => {
+    window.addEventListener("pointermove", handlePointerMoveGlobal)
+    window.addEventListener("pointerup", handlePointerUpGlobal)
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMoveGlobal)
+      window.removeEventListener("pointerup", handlePointerUpGlobal)
+    }
+  }, [handlePointerMoveGlobal, handlePointerUpGlobal])
 
   const slide = slides[selectedIndex]
   if (!slide) return null
@@ -109,62 +259,71 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange, onSlideUpd
   const contentClass = CONTENT_SIZE_MAP[slide.contentSize].content
   const alignClass = ALIGN_MAP[slide.textAlign]
 
-  const getFieldOff = (f: TextFieldKey) =>
+  const getFieldOff = (f: FieldKey) =>
     liveOffset?.id === f ? { x: liveOffset.x, y: liveOffset.y } : (slide.textOffsets?.[f] ?? { x: 0, y: 0 })
   const getExtraOff = (id: string) =>
     liveOffset?.id === id ? { x: liveOffset.x, y: liveOffset.y } : ((slide.extraTexts ?? []).find(e => e.id === id)?.offset ?? { x: 0, y: 0 })
   const getW = (id: string, stored?: number) =>
     liveWidth?.id === id ? `${liveWidth.w}%` : stored ? `${stored}%` : "auto"
-  const fBold = (f: TextFieldKey) => slide.textBold?.[f] ?? false
+  const fBold = (f: FieldKey) => slide.textBold?.[f] ?? false
 
-  const commitField = () => {
-    if (!editingField) return
-    onUpdateRef.current?.({ [editingField]: editingValue })
-    setEditingField(null)
-  }
-  const commitExtra = () => {
-    if (!editingExtraId) return
-    onUpdateRef.current?.({ extraTexts: (slide.extraTexts ?? []).map(e => e.id === editingExtraId ? { ...e, content: editingValue } : e) })
-    setEditingExtraId(null)
-  }
-
-  // Start a MOVE drag
-  const startMove = (e: React.MouseEvent, id: string, kind: "field" | "extra", off: { x: number; y: number }) => {
-    e.preventDefault()
-    e.stopPropagation()
-    wasMovedRef.current = false
-    dragRef.current = { targetId: id, targetKind: kind, sx: e.clientX, sy: e.clientY, ox: off.x, oy: off.y, lx: off.x, ly: off.y }
+  // Commit edits
+  const commitEdit = () => {
+    if (!editing) return
+    const { id, kind } = editing
+    const s = slideRef.current
+    if (kind === "field") {
+      onUpdateRef.current?.({ [id]: editValue })
+    } else {
+      onUpdateRef.current?.({ extraTexts: (s.extraTexts ?? []).map(e => e.id === id ? { ...e, content: editValue } : e) })
+    }
+    setEditing(null)
   }
 
-  // Start a RESIZE drag
-  const startResize = (e: React.MouseEvent, id: string, kind: "field" | "extra", storedW?: number) => {
-    e.preventDefault()
-    e.stopPropagation()
-    wasMovedRef.current = true // treat resize start as a "move" so onClick is suppressed
-    const cw = cardRef.current?.getBoundingClientRect().width ?? 384
-    resizeRef.current = { targetId: id, targetKind: kind, sx: e.clientX, sw: ((storedW ?? 100) / 100) * cw, cw }
-  }
-
-  // Handle a CLICK on a text element (React onClick — fires after mouseup)
+  // Click on a text element: first click = select, second = edit
   const handleItemClick = (e: React.MouseEvent, id: string, kind: "field" | "extra") => {
     e.stopPropagation()
-    if (wasMovedRef.current) return // was a drag, not a click
-    const cur = selRef.current
-    const curId = cur === null ? null : (cur.kind === "field" ? cur.field : cur.id)
-    if (curId === id && cur?.kind === kind) {
-      // Second click on same element → enter edit mode
+    if (moveDrag.current?.moved) return // was a drag
+    if (sel?.id === id && sel.kind === kind && !editing) {
+      // Second click → enter edit mode
       const s = slideRef.current
       const val = kind === "field"
         ? (id === "title" ? s.title : id === "subtitle" ? (s.subtitle ?? "") : id === "content" ? s.content : (s.cta ?? ""))
         : ((s.extraTexts ?? []).find(ex => ex.id === id)?.content ?? "")
-      setEditingValue(val)
-      if (kind === "field") setEditingField(id as TextFieldKey)
-      else setEditingExtraId(id)
+      setEditValue(val)
+      setEditing({ id, kind })
+    } else if (editing?.id === id && editing.kind === kind) {
+      // Already editing, do nothing
     } else {
       // First click → select
-      setSel2(kind === "field" ? { kind: "field", field: id as TextFieldKey } : { kind: "extra", id })
-      setEditingField(null)
-      setEditingExtraId(null)
+      setSel({ id, kind })
+      setEditing(null)
+    }
+  }
+
+  // Start a MOVE drag from toolbar drag handle
+  const startMoveDrag = (e: React.PointerEvent, id: string, kind: "field" | "extra", off: { x: number; y: number }) => {
+    e.stopPropagation()
+    const el = e.currentTarget
+    try { el.setPointerCapture(e.pointerId) } catch {}
+    moveDrag.current = {
+      pointerId: e.pointerId, el,
+      targetId: id, targetKind: kind,
+      sx: e.clientX, sy: e.clientY,
+      ox: off.x, oy: off.y, lx: off.x, ly: off.y, moved: false,
+    }
+  }
+
+  // Start a RESIZE drag
+  const startResizeDrag = (e: React.PointerEvent, id: string, kind: "field" | "extra", storedW?: number) => {
+    e.stopPropagation()
+    const el = e.currentTarget
+    try { el.setPointerCapture(e.pointerId) } catch {}
+    const cw = cardRef.current?.getBoundingClientRect().width ?? 384
+    resizeDrag.current = {
+      pointerId: e.pointerId, el,
+      targetId: id, targetKind: kind,
+      sx: e.clientX, sw: ((storedW ?? 100) / 100) * cw, cw,
     }
   }
 
@@ -173,214 +332,105 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange, onSlideUpd
     if (!clip) return
     const neo: ExtraText = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-      content: clip.content, color: clip.color, bold: clip.bold, offset: { x: 24, y: 24 }
+      content: clip.content, color: clip.color, bold: clip.bold, offset: { x: 24, y: 24 },
     }
     onUpdateRef.current?.({ extraTexts: [...(slide.extraTexts ?? []), neo] })
-    setSel2({ kind: "extra", id: neo.id })
+    setSel({ id: neo.id, kind: "extra" })
   }
 
-  // ── Toolbar (plain function) ──────────────────────────────────
-  const renderToolbar = (
-    bold: boolean,
-    onBold: (e: React.MouseEvent) => void,
-    onCopy: (e: React.MouseEvent) => void,
-    editing: boolean,
-    onDelete?: (e: React.MouseEvent) => void
-  ) => (
-    <div
-      className="absolute -top-11 left-0 flex items-center gap-1 bg-black/85 backdrop-blur-sm rounded-xl px-2 py-1.5 z-50 shadow-xl"
-      onMouseDown={e => e.stopPropagation()}
-      onClick={e => e.stopPropagation()}
-    >
-      <button onClick={onBold} title="굵게"
-        className={cn("w-7 h-7 flex items-center justify-center rounded text-sm font-black transition-all",
-          bold ? "bg-blue-500 text-white" : "text-white/70 hover:bg-white/20 hover:text-white")}>B</button>
-      <div className="w-px h-4 bg-white/20 mx-0.5" />
-      <button onClick={onCopy} title="복사"
-        className="w-7 h-7 flex items-center justify-center rounded text-white/70 hover:bg-white/20 hover:text-white transition-all">
-        <Copy className="w-3.5 h-3.5" />
-      </button>
-      {onDelete && (
-        <>
-          <div className="w-px h-4 bg-white/20 mx-0.5" />
-          <button onClick={onDelete} title="삭제"
-            className="w-7 h-7 flex items-center justify-center rounded text-red-400 hover:bg-red-500/20 transition-all">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </>
-      )}
-      <div className="w-px h-4 bg-white/20 mx-0.5" />
-      <span className="text-white/40 text-[10px] whitespace-nowrap">
-        {editing ? "Enter·저장 Esc·취소" : "클릭: 편집"}
-      </span>
-    </div>
-  )
-
-  // ── Wrapper div for a text element (plain function) ───────────
-  const wrap = (
-    targetId: string,
-    targetKind: "field" | "extra",
-    isSelEl: boolean,
-    isEditEl: boolean,
-    offset: { x: number; y: number },
-    width: string,
-    bold: boolean,
-    toolbar: React.ReactNode,
-    children: React.ReactNode,
-    storedW?: number
-  ) => {
-    const isDrag = liveOffset?.id === targetId
-    const isRes = liveWidth?.id === targetId
-    return (
-      <div
-        className={cn("relative group", !isEditEl && "cursor-move")}
-        style={{
-          transform: `translate(${offset.x}px,${offset.y}px)`,
-          transition: isDrag ? "none" : "transform 0.1s ease",
-          width, minWidth: "4ch",
-          zIndex: isSelEl || isEditEl ? 20 : undefined,
-          fontWeight: bold ? 900 : undefined,
-        }}
-        onMouseDown={e => { if (!isEditEl) startMove(e, targetId, targetKind, offset) }}
-        onClick={e => handleItemClick(e, targetId, targetKind)}
-      >
-        {/* Hover / selection border */}
-        <div className={cn(
-          "absolute -inset-1.5 rounded pointer-events-none border-2 transition-opacity",
-          isSelEl || isEditEl
-            ? "opacity-100 border-blue-400"
-            : "opacity-0 group-hover:opacity-60 border-white/60"
-        )} />
-
-        {/* Hover tooltip */}
-        {!isSelEl && !isEditEl && (
-          <div className="absolute -top-6 left-0 opacity-0 group-hover:opacity-100 pointer-events-none z-30">
-            <span className="text-[10px] bg-black/70 text-white px-2 py-0.5 rounded whitespace-nowrap">
-              드래그·이동 클릭·선택
-            </span>
-          </div>
-        )}
-
-        {/* Toolbar */}
-        {(isSelEl || isEditEl) && toolbar}
-
-        {/* Resize handle */}
-        {(isSelEl || isEditEl) && (
-          <div
-            className="absolute -right-2 top-0 bottom-0 w-4 flex items-center justify-center cursor-ew-resize z-40"
-            onMouseDown={e => startResize(e, targetId, targetKind, storedW)}
-            onClick={e => e.stopPropagation()}
-          >
-            <div className={cn(
-              "w-1.5 h-10 max-h-full rounded-full",
-              isRes ? "bg-blue-300" : "bg-blue-500 hover:bg-blue-300"
-            )} />
-          </div>
-        )}
-
-        {children}
-      </div>
-    )
-  }
-
-  // ── Inline textarea ───────────────────────────────────────────
-  const renderTextarea = (onBlur: () => void, noNewline?: boolean) => (
-    <textarea
-      autoFocus
-      className="block w-full bg-transparent outline-none resize-none overflow-hidden cursor-text pr-3"
-      style={{
-        color: "inherit", fontFamily: "inherit", fontSize: "inherit",
-        fontWeight: "inherit", lineHeight: "inherit",
-        textAlign: "inherit" as React.CSSProperties["textAlign"],
-        minWidth: "8ch", padding: 0, border: "none",
-      }}
-      value={editingValue}
-      onChange={e => {
-        setEditingValue(e.target.value)
-        e.target.style.height = "auto"
-        e.target.style.height = e.target.scrollHeight + "px"
-      }}
-      onBlur={onBlur}
-      onKeyDown={e => {
-        e.stopPropagation()
-        if (e.key === "Escape") { setEditingField(null); setEditingExtraId(null) }
-        if (noNewline && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onBlur() }
-      }}
-    />
-  )
-
-  // ── Fixed text field ──────────────────────────────────────────
-  const renderField = (field: TextFieldKey, value: string, staticEl: React.ReactNode) => {
+  // Render a fixed text field
+  const renderField = (field: FieldKey, value: string, staticEl: React.ReactNode) => {
     if (!value && field !== "title" && field !== "content") return null
     const off = getFieldOff(field)
-    const isSelEl = sel?.kind === "field" && sel.field === field
-    const isEditEl = editingField === field
+    const isSelected = sel?.id === field && sel.kind === "field"
+    const isEditing = editing?.id === field && editing.kind === "field"
     const bold = fBold(field)
-    const toolbar = renderToolbar(
-      bold,
-      e => { e.stopPropagation(); onUpdateRef.current?.({ textBold: { ...(slide.textBold ?? {}), [field]: !bold } }) },
-      e => {
-        e.stopPropagation()
-        const c = field === "title" ? slide.title
-          : field === "subtitle" ? (slide.subtitle ?? "")
-          : field === "content" ? slide.content
-          : (slide.cta ?? "")
-        setClip({ content: c, color: field === "content" ? slide.bgStyle.textColor : slide.bgStyle.titleColor, bold })
-      },
-      isEditEl
-    )
-    return wrap(
-      field, "field", isSelEl, isEditEl, off,
-      getW(field, slide.textWidths?.[field]), bold, toolbar,
-      isEditEl ? renderTextarea(commitField, field !== "content") : staticEl,
-      slide.textWidths?.[field]
+    const isDragging = liveOffset?.id === field && (moveDrag.current?.targetId === field)
+    const isResizing = liveWidth?.id === field
+
+    return (
+      <TextBlock
+        key={field}
+        targetId={field} targetKind="field"
+        offset={off} widthStyle={getW(field, slide.textWidths?.[field])}
+        bold={bold} isSelected={isSelected} isEditing={isEditing}
+        editingValue={editValue} isDragging={!!isDragging} isResizing={!!isResizing}
+        storedW={slide.textWidths?.[field]}
+        onClickItem={e => handleItemClick(e, field, "field")}
+        onPointerDownMove={e => startMoveDrag(e, field, "field", off)}
+        onPointerDownResize={e => startResizeDrag(e, field, "field", slide.textWidths?.[field])}
+        onBold={e => { e.stopPropagation(); onUpdateRef.current?.({ textBold: { ...(slide.textBold ?? {}), [field]: !bold } }) }}
+        onCopy={e => {
+          e.stopPropagation()
+          const c = field === "title" ? slide.title : field === "subtitle" ? (slide.subtitle ?? "") : field === "content" ? slide.content : (slide.cta ?? "")
+          setClip({ content: c, color: field === "content" ? slide.bgStyle.textColor : slide.bgStyle.titleColor, bold })
+        }}
+        onEditChange={(val, el) => { setEditValue(val); el.style.height = "auto"; el.style.height = el.scrollHeight + "px" }}
+        onEditBlur={commitEdit}
+        onEditKeyDown={e => {
+          e.stopPropagation()
+          if (e.key === "Escape") { setEditing(null) }
+          if (field !== "content" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitEdit() }
+        }}
+      >
+        {staticEl}
+      </TextBlock>
     )
   }
 
-  // ── Extra (free-floating) text layer ─────────────────────────
+  // Render an extra (free-floating) text layer
   const renderExtra = (et: ExtraText) => {
     const off = getExtraOff(et.id)
-    const isSelEl = sel?.kind === "extra" && sel.id === et.id
-    const isEditEl = editingExtraId === et.id
-    const toolbar = renderToolbar(
-      et.bold,
-      e => { e.stopPropagation(); onUpdateRef.current?.({ extraTexts: (slide.extraTexts ?? []).map(x => x.id === et.id ? { ...x, bold: !x.bold } : x) }) },
-      e => { e.stopPropagation(); setClip({ content: et.content, color: et.color, bold: et.bold }) },
-      isEditEl,
-      e => { e.stopPropagation(); onUpdateRef.current?.({ extraTexts: (slide.extraTexts ?? []).filter(x => x.id !== et.id) }); setSel2(null) }
-    )
-    return wrap(
-      et.id, "extra", isSelEl, isEditEl, off,
-      getW(et.id, et.width), et.bold, toolbar,
-      isEditEl
-        ? renderTextarea(commitExtra, true)
-        : <p className="text-base leading-relaxed whitespace-pre-line" style={{ color: et.color, fontWeight: et.bold ? 900 : undefined }}>{et.content || "텍스트 입력"}</p>,
-      et.width
+    const isSelected = sel?.id === et.id && sel.kind === "extra"
+    const isEditing = editing?.id === et.id && editing.kind === "extra"
+    const isDragging = liveOffset?.id === et.id
+    const isResizing = liveWidth?.id === et.id
+
+    return (
+      <TextBlock
+        key={et.id}
+        targetId={et.id} targetKind="extra"
+        offset={off} widthStyle={getW(et.id, et.width)}
+        bold={et.bold} isSelected={isSelected} isEditing={isEditing}
+        editingValue={editValue} isDragging={!!isDragging} isResizing={!!isResizing}
+        storedW={et.width}
+        onClickItem={e => handleItemClick(e, et.id, "extra")}
+        onPointerDownMove={e => startMoveDrag(e, et.id, "extra", off)}
+        onPointerDownResize={e => startResizeDrag(e, et.id, "extra", et.width)}
+        onBold={e => { e.stopPropagation(); onUpdateRef.current?.({ extraTexts: (slide.extraTexts ?? []).map(x => x.id === et.id ? { ...x, bold: !x.bold } : x) }) }}
+        onCopy={e => { e.stopPropagation(); setClip({ content: et.content, color: et.color, bold: et.bold }) }}
+        onDelete={e => { e.stopPropagation(); onUpdateRef.current?.({ extraTexts: (slide.extraTexts ?? []).filter(x => x.id !== et.id) }); setSel(null) }}
+        onEditChange={(val, el) => { setEditValue(val); el.style.height = "auto"; el.style.height = el.scrollHeight + "px" }}
+        onEditBlur={commitEdit}
+        onEditKeyDown={e => {
+          e.stopPropagation()
+          if (e.key === "Escape") { setEditing(null) }
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitEdit() }
+        }}
+      >
+        <p className="text-base leading-relaxed whitespace-pre-line" style={{ color: et.color }}>{et.content || "텍스트 입력"}</p>
+      </TextBlock>
     )
   }
 
   const goToPrev = () => { if (selectedIndex > 0) onSlideChange(selectedIndex - 1) }
   const goToNext = () => { if (selectedIndex < slides.length - 1) onSlideChange(selectedIndex + 1) }
 
+  const clearSelection = () => {
+    if (editing) commitEdit()
+    else { setSel(null); setEditing(null) }
+  }
+
   return (
-    <div
-      className="flex flex-col items-center h-full py-6 px-4 gap-4"
-      onClick={() => {
-        if (editingField) commitField()
-        if (editingExtraId) commitExtra()
-        setSel2(null)
-        setEditingField(null)
-        setEditingExtraId(null)
-      }}
-    >
+    <div className="flex flex-col items-center h-full py-6 px-4 gap-4" onClick={clearSelection}>
       {/* 상단 컨트롤 */}
-      <div className="flex items-center gap-4 w-full max-w-sm">
+      <div className="flex items-center gap-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-1 p-1 rounded-lg bg-white/5 border border-white/10">
-          <button onClick={e => { e.stopPropagation(); setAspectMode("square") }}
+          <button onClick={() => setAspectMode("square")}
             className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
               aspectMode === "square" ? "bg-primary text-primary-foreground shadow" : "text-white/50 hover:text-white/80")}
           ><Square className="w-3 h-3" />1:1</button>
-          <button onClick={e => { e.stopPropagation(); setAspectMode("story") }}
+          <button onClick={() => setAspectMode("story")}
             className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
               aspectMode === "story" ? "bg-primary text-primary-foreground shadow" : "text-white/50 hover:text-white/80")}
           ><Smartphone className="w-3 h-3" />9:16</button>
@@ -391,11 +441,11 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange, onSlideUpd
           ><Clipboard className="w-3.5 h-3.5" />붙여넣기</button>
         )}
         <div className="flex items-center gap-2 ml-auto">
-          <button onClick={e => { e.stopPropagation(); goToPrev() }} disabled={selectedIndex === 0}
+          <button onClick={goToPrev} disabled={selectedIndex === 0}
             className="w-7 h-7 rounded-lg flex items-center justify-center border border-white/10 text-white/50 hover:text-white hover:border-white/30 disabled:opacity-30 transition-all"
           ><ChevronLeft className="w-4 h-4" /></button>
           <span className="text-xs text-white/40 tabular-nums w-10 text-center">{selectedIndex + 1} / {slides.length}</span>
-          <button onClick={e => { e.stopPropagation(); goToNext() }} disabled={selectedIndex === slides.length - 1}
+          <button onClick={goToNext} disabled={selectedIndex === slides.length - 1}
             className="w-7 h-7 rounded-lg flex items-center justify-center border border-white/10 text-white/50 hover:text-white hover:border-white/30 disabled:opacity-30 transition-all"
           ><ChevronRight className="w-4 h-4" /></button>
         </div>
@@ -421,12 +471,10 @@ export function EditorPreview({ slides, selectedIndex, onSlideChange, onSlideUpd
               <img src={slide.logoUrl} alt="logo" className="h-8 max-w-[120px] object-contain" />
             </div>
           )}
-
           {slide.productImageUrl && (
             <div className={cn("absolute left-1/2 -translate-x-1/2 z-10 pointer-events-none",
               (slide.productImagePosition ?? "top") === "top" ? "top-6"
-                : (slide.productImagePosition ?? "top") === "center" ? "top-1/2 -translate-y-1/2"
-                : "bottom-6")}
+                : (slide.productImagePosition ?? "top") === "center" ? "top-1/2 -translate-y-1/2" : "bottom-6")}
               style={{ width: `${PRODUCT_IMAGE_SIZE_MAP[slide.productImageSize ?? "md"]}%` }}>
               <img src={slide.productImageUrl} alt="product" className="w-full h-auto object-contain drop-shadow-lg" />
             </div>
