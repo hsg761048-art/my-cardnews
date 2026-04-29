@@ -400,6 +400,7 @@ function EditorContent() {
             slides={slides}
             selectedIndex={selectedIndex}
             onSlideChange={setSelectedIndex}
+            onSlideUpdate={updateSlide}
           />
         </main>
       </div>

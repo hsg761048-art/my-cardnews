@@ -38,6 +38,7 @@ export interface Slide {
   productImageUrl?: string
   productImagePosition?: ProductImagePosition
   productImageSize?: ProductImageSize
+  textOffsets?: Partial<Record<"subtitle" | "title" | "content" | "cta", { x: number; y: number }>>
 }
 
 // 제품 이미지 크기 매핑 (슬라이드 너비 대비 %)
@@ -238,3 +239,6 @@ export function createDefaultSlide(overrides?: Partial<Slide>): Slide {
     ...overrides,
   }
 }
+
+// 텍스트 요소 드래그 오프셋 (슬라이드 미리보기에서 직접 이동 시 저장)
+export type TextOffsets = Partial<Record<"subtitle" | "title" | "content" | "cta", { x: number; y: number }>>
