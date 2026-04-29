@@ -39,6 +39,8 @@ export interface Slide {
   productImagePosition?: ProductImagePosition
   productImageSize?: ProductImageSize
   textOffsets?: Partial<Record<"subtitle" | "title" | "content" | "cta", { x: number; y: number }>>
+  textBold?: Partial<Record<"subtitle" | "title" | "content" | "cta", boolean>>
+  textWidths?: Partial<Record<"subtitle" | "title" | "content" | "cta", number>>
 }
 
 // 제품 이미지 크기 매핑 (슬라이드 너비 대비 %)
